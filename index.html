@@ -1,0 +1,3784 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pay Gap Remediation Cost Calculator</title>
+<!-- No external resources of any kind: no fonts, no CDN, no analytics.
+     Open the Network tab: it stays empty. That is the point of the tool. -->
+
+<!-- Metadata, so a shared link renders as a card rather than a bare URL.
+     og:image is deliberately absent: an image would have to be embedded as a
+     data URI, and no scraper reads those — a missing image degrades to a
+     text card, whereas a broken remote one would break the zero-request rule. -->
+<meta name="description" content="What it costs to close the unexplained gender pay gap: minimum compliance against full equalisation, under EU Directive 2023/970. Runs entirely in your browser.">
+<meta name="author" content="Olga Dimitrova">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Pay Gap Remediation Cost Calculator">
+<meta property="og:description" content="Minimum compliance or full equalisation: what each one costs, and what the choice between them costs. Load your own CSV; nothing leaves the tab.">
+<meta property="og:locale" content="en_GB">
+<meta name="twitter:card" content="summary">
+<link rel="license" href="https://creativecommons.org/licenses/by/4.0/">
+<style>
+:root {
+  color-scheme: light dark;
+
+  --bg:        #fbfaf8;
+  --bg-panel:  #ffffff;
+  --bg-sunk:   #f2f0ec;
+  --ink:       #1a1a18;
+  --ink-mid:   #4d4c48;
+  --ink-soft:  #78766f;
+  --line:      #ddd9d2;
+  --line-soft: #e9e6e0;
+  --accent:    #1f4f6b;
+  --accent-soft:#e2edf3;
+  --warn:      #8a5a10;
+  --warn-bg:   #fbf1de;
+  --err:       #8e2a20;
+  --err-bg:    #fbe9e6;
+  --ok:        #1f5d3a;
+  --ok-bg:     #e5f2ea;
+  --focus:     #1f4f6b;
+
+  /* Chart series colours. Validated as a set with the dataviz palette checker
+     against the panel surface (#ffffff): worst adjacent pair deutan dE 11.7,
+     normal-vision dE 18.8, all three >= 3:1 contrast. The previous pairing
+     (accent #1f4f6b with violet #6d4a86) failed: protan dE 4.7 and 12.3 even
+     with full colour vision — and that is exactly the pair that has to
+     separate "corrected" from "reverse gap, never corrected".
+     Do not retune these by eye; re-run the checker. */
+  --s-gap:     #2a78d6;   /* the gap being closed */
+  --s-rev:     #c0417c;   /* gap favouring women — shown, never corrected */
+  --s-thresh:  #8a5a10;   /* joint-pay-assessment threshold */
+
+  --mono: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #14161a;
+    --bg-panel:  #1b1e23;
+    --bg-sunk:   #21242a;
+    --ink:       #e9e7e2;
+    --ink-mid:   #b8b5ae;
+    --ink-soft:  #8d8a83;
+    --line:      #33373e;
+    --line-soft: #2a2e34;
+    --accent:    #8fc2dd;
+    --accent-soft:#1e2f3a;
+    --warn:      #e2b168;
+    --warn-bg:   #33291a;
+    --err:       #ef9d92;
+    --err-bg:    #351f1c;
+    --ok:        #8fd0a8;
+    --ok-bg:     #172b20;
+    --focus:     #8fc2dd;
+
+    /* Dark steps are selected for the dark panel (#1b1e23), not flipped from
+       light: blue vs violet collapses here (protan dE 1.9). Magenta holds.
+       Checked set: protan dE 11.1, normal-vision dE 18.3, all >= 3:1. */
+    --s-gap:     #4590e2;
+    --s-rev:     #d16b9a;
+    --s-thresh:  #b8861f;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-x: hidden;
+}
+
+.wrap {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.15rem 4rem;
+}
+
+a { color: var(--accent); }
+
+h1, h2, h3 { font-weight: 600; line-height: 1.25; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: 1.25rem; }
+h2 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+h3 { font-size: 0.95rem; margin-bottom: 0.35rem; }
+
+p { margin: 0 0 0.75rem; }
+.muted { color: var(--ink-soft); }
+.small { font-size: 0.83rem; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.fig .value.num { font-variant-numeric: proportional-nums; font-feature-settings: "tnum" 0; }
+
+/* ------------------------------------------------------------- masthead */
+.masthead {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.9rem;
+  margin-bottom: 1.6rem;
+}
+.masthead .sub {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  margin: 0.3rem 0 0;
+}
+
+/* -------------------------------------------------------- first screen */
+.headline { margin: 0 0 1.9rem; }
+
+.figures {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+}
+@media (min-width: 46rem) {
+  .figures { grid-template-columns: 1fr 1fr 1.25fr; align-items: stretch; }
+}
+
+.fig {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.95rem 1rem 0.9rem;
+}
+.fig .label {
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+}
+/* Hero figures stay in the UI sans with proportional figures. A serif here
+   reads as decoration, and tabular figures make a large number look loose —
+   tnum belongs in the table and the axis, where digits align vertically. */
+.fig .value {
+  font-size: clamp(1.75rem, 8vw, 2.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+.fig .note { font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.3rem; }
+
+.fig-main {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.fig-main .label { color: var(--accent); }
+.fig-main .value { font-size: clamp(2.3rem, 12vw, 3.4rem); }
+
+.verdict {
+  margin: 1.05rem 0 0;
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 4.4vw, 1.35rem);
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- panels */
+section { margin: 0 0 2.1rem; }
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1.05rem 1.05rem 1.15rem;
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.9rem;
+  margin-bottom: 0.75rem;
+}
+.section-head h2 { margin: 0; }
+.section-head .hint { color: var(--ink-soft); font-size: 0.82rem; }
+
+/* -------------------------------------------------------------- controls */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem 1.1rem;
+}
+@media (min-width: 34rem) { .controls { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 56rem) { .controls { grid-template-columns: 1fr 1fr 1fr; } }
+
+.ctl { display: flex; flex-direction: column; gap: 0.25rem; }
+.ctl label { font-size: 0.86rem; font-weight: 600; }
+.ctl .jur {
+  font-size: 0.73rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+.ctl input {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  padding: 0.42rem 0.55rem;
+  background: var(--bg-sunk);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  width: 100%;
+  min-width: 0;
+}
+input:focus-visible, select:focus-visible, button:focus-visible,
+summary:focus-visible, [type="radio"]:focus-visible, [type="file"]:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.ctl-foot {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-sunk);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--ink-soft); }
+
+/* -------------------------------------------------------------- scenario */
+.scenario {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  align-items: center;
+}
+.scenario .sc-legend { font-size: 0.86rem; font-weight: 600; }
+.scenario label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* ----------------------------------------------------------------- chart */
+.chart-box { width: 100%; }
+.chart-svg { display: block; width: 100%; height: auto; }
+
+.gridline { stroke: var(--line-soft); stroke-width: 1; }
+.zeroline { stroke: var(--ink-soft); stroke-width: 1.25; }
+/* Dashing is reserved for the threshold: it is a rule the reader must not
+   confuse with the grid, and it is genuinely a limit rather than data. */
+.threshline {
+  stroke: var(--s-thresh);
+  stroke-width: 1.75;
+  stroke-dasharray: 7 5;
+}
+.thresh-lab {
+  fill: var(--s-thresh);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+.axis-lab {
+  fill: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+/* 12.5px, not 11.5: uppercase with letter-spacing needs more size to stay
+   legible, and on a phone the viewBox floor scales this down by ~0.88. */
+.axis-title {
+  fill: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cat-lab { fill: var(--ink); font-family: var(--sans); font-size: 14px; }
+.cat-sub { fill: var(--ink-soft); font-family: var(--sans); font-size: 12px; }
+
+.connector { stroke: var(--s-gap); stroke-width: 2; }
+.connector.flat { stroke: var(--ink-soft); stroke-width: 1; stroke-dasharray: 3 3; }
+
+/* The 2px surface ring separates the two markers where they nearly touch —
+   a small residual leaves before and after almost on top of each other. */
+.pt-before { fill: var(--bg-panel); stroke: var(--s-gap); stroke-width: 2; }
+.pt-after  { fill: var(--s-gap); stroke: var(--bg-panel); stroke-width: 2; }
+
+.cat.reverse .connector { stroke: var(--s-rev); }
+.cat.reverse .pt-before { stroke: var(--s-rev); }
+.cat.reverse .pt-after  { fill: var(--s-rev); stroke: var(--bg-panel); }
+
+/* Hover/focus layer. The hit target is a full-height slot, not the 9px marker:
+   landing on a dot dead-centre is not a reasonable ask. */
+.cat-hit { fill: transparent; cursor: pointer; }
+.cat-band { fill: var(--ink); opacity: 0; transition: opacity 0.12s ease; }
+.cat.hot .cat-band { opacity: 0.045; }
+.cat-hit:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) {
+  .cat-band { transition: none; }
+}
+
+/* Direct labels, selective by rule: the largest residual and any reverse gap.
+   A number on every point would be unreadable at seven categories. */
+.pt-lab {
+  fill: var(--ink);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--bg-panel);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+}
+
+.unrel-ring {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1.25;
+  stroke-dasharray: 2.5 2.5;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+  margin-top: 0.7rem;
+  font-size: 0.79rem;
+  color: var(--ink-mid);
+}
+.legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.key { display: inline-block; width: 0.75rem; height: 0.75rem; flex: none; }
+.key-before { border: 2px solid var(--s-gap); border-radius: 50%; background: var(--bg-panel); }
+.key-after  { border: 2px solid var(--s-gap); border-radius: 50%; background: var(--s-gap); }
+.key-rev    { border: 2px solid var(--s-rev); background: var(--s-rev); transform: rotate(45deg); }
+.key-thresh { height: 0; border-top: 2px dashed var(--s-thresh); width: 1.2rem; }
+.key-unrel  { border: 1.5px dashed var(--ink-soft); border-radius: 50%; }
+
+/* ----------------------------------------------------------------- tables */
+.scroller {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+}
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+th, td {
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-sunk);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-mid);
+  white-space: normal;
+  min-width: 5.5rem;
+  vertical-align: bottom;
+}
+tbody th, tfoot th { font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.strong { font-weight: 600; }
+td.neg { color: var(--s-rev); }
+tfoot td, tfoot th {
+  border-top: 2px solid var(--line);
+  border-bottom: none;
+  font-weight: 600;
+  background: var(--bg-sunk);
+}
+tr.row-reverse th[scope="row"] { color: var(--s-rev); }
+tr.row-unreliable { background: var(--bg-sunk); }
+
+.tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink-mid);
+  margin-right: 0.3rem;
+  white-space: nowrap;
+}
+
+table.mini { font-size: 0.8rem; margin-top: 0.5rem; }
+table.mini th, table.mini td { padding: 0.3rem 0.5rem; }
+
+/* --------------------------------------------------------------- summary */
+.summary th.k { font-weight: 400; color: var(--ink-mid); white-space: normal; }
+.summary td.v { font-weight: 600; }
+
+/* ------------------------------------------------------------ self-check */
+.selfcheck {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-size: 0.85rem;
+}
+/* `display: flex` outranks the hidden attribute, which left an empty green
+   frame on the page when the banner was hidden. */
+.selfcheck[hidden] { display: none; }
+.selfcheck .sc-dot {
+  width: 0.6rem; height: 0.6rem; border-radius: 50%;
+  flex: none; margin-top: 0.42rem;
+}
+.selfcheck.pass { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
+.selfcheck.pass .sc-dot { background: var(--ok); }
+.selfcheck.fail { background: var(--err-bg); border-color: var(--err); color: var(--err); }
+.selfcheck.fail .sc-dot { background: var(--err); }
+.selfcheck.pending { background: var(--bg-sunk); color: var(--ink-soft); }
+.selfcheck.pending .sc-dot { background: var(--ink-soft); }
+/* No section margin while the banner is hidden, or the layout keeps a gap
+   where nothing is drawn. :has() is unsupported in older browsers; there the
+   worst case is that spare margin, not a broken layout. */
+.sc-section:has(> .selfcheck[hidden]) { margin: 0; }
+.sc-title { font-weight: 600; }
+.sc-list { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+.sc-name { font-weight: 600; }
+
+/* --------------------------------------------------------------- upload */
+.privacy {
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 2px;
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.9rem;
+}
+.privacy strong { color: var(--accent); }
+.privacy p:last-child { margin-bottom: 0; }
+
+.upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+}
+input[type="file"] {
+  font: inherit;
+  font-size: 0.85rem;
+  max-width: 100%;
+}
+/* Looks like the neighbouring button but is an <a download>: the sample is a
+   data: URI, so the browser saves it without any request. */
+.btn-link {
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}
+.btn-link:hover { border-color: var(--accent); }
+
+.notice {
+  border-radius: 2px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.85rem;
+  margin-top: 0.55rem;
+  border: 1px solid;
+}
+.notice.ok   { background: var(--ok-bg);   border-color: var(--ok);   color: var(--ok); }
+.notice.warn { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
+.notice.error{ background: var(--err-bg);  border-color: var(--err);  color: var(--err); }
+
+/* ---------------------------------------------------------------- method */
+details.method {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg-panel);
+}
+details.method > summary {
+  cursor: pointer;
+  padding: 0.85rem 1.05rem;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+details.method > summary::-webkit-details-marker { display: none; }
+details.method > summary::before {
+  content: "+";
+  font-family: var(--mono);
+  color: var(--ink-soft);
+}
+details.method[open] > summary::before { content: "\2212"; }
+details.method > summary .sm { font-weight: 400; color: var(--ink-soft); font-size: 0.82rem; }
+.method-body {
+  padding: 0 1.05rem 1.2rem;
+  border-top: 1px solid var(--line-soft);
+  font-size: 0.9rem;
+}
+.method-body h3 { margin-top: 1.15rem; }
+.method-body ol { padding-left: 1.2rem; }
+.method-body li { margin-bottom: 0.35rem; }
+
+.formula {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  background: var(--bg-sunk);
+  border-left: 2px solid var(--line);
+  padding: 0.5rem 0.7rem;
+  margin: 0.4rem 0 0.7rem;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+blockquote.caveat {
+  margin: 0.6rem 0 0.9rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid var(--accent);
+  background: var(--bg-sunk);
+  font-family: var(--serif);
+  font-size: 0.95rem;
+}
+blockquote.caveat p:last-child { margin-bottom: 0; }
+
+/* -------------------------------------------------------- scenario tiles */
+/* Two columns of stat tiles, one per scenario, plus a difference column that
+   carries the page's actual point. Below 46rem they stack. */
+.scen-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+@media (min-width: 46rem) {
+  .scen-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.scen {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.85rem 0.9rem 0.95rem;
+  background: var(--bg-panel);
+}
+.scen-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.55rem;
+}
+.scen-name {
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+/* Proportional figures: a large standalone number looks loose with tnum. */
+.scen-total {
+  font-size: clamp(1.5rem, 6vw, 1.95rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: proportional-nums;
+}
+
+/* Meter: the fill is the cost as a share of payroll, the track a lighter step
+   of the same hue, so the ratio reads across the whole bar. */
+.meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent-soft);
+  overflow: hidden;
+  /* Clear of the headline above it: at clamp() sizes the number's descender
+     box reaches further down than the type size suggests. */
+  margin: 0.45rem 0 0.3rem;
+}
+.meter > i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--s-gap);
+}
+.meter-note { font-size: 0.75rem; color: var(--ink-soft); }
+
+.scen-rows {
+  margin: 0.7rem 0 0;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 0.55rem;
+  display: grid;
+  gap: 0.28rem;
+}
+.scen-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.83rem;
+}
+.scen-row .k { color: var(--ink-soft); }
+.scen-row .v { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* The difference tile spans the row: it is the sentence the page is making,
+   not a third scenario. */
+.scen-diff {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+@media (min-width: 46rem) {
+  .scen-diff { grid-column: 1 / -1; }
+}
+.scen-diff .scen-name { color: var(--accent); }
+.scen-diff .scen-rows { border-top-color: var(--accent); }
+/* The difference tile spans both columns, but its rows must not: a label and a
+   figure stretched across the full width leave the eye nothing to follow. */
+@media (min-width: 46rem) {
+  .scen-diff .scen-rows {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2.2rem;
+  }
+}
+
+.tbl-fallback { margin-top: 0.9rem; }
+.tbl-fallback > summary {
+  cursor: pointer;
+  font-size: 0.83rem;
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- footer */
+footer {
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+/* Attribution and licence, set apart from the disclaimers above them. */
+.byline { margin-top: 0.6rem; }
+.byline a { color: var(--accent); }
+footer p { margin-bottom: 0.35rem; }
+
+.vh {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <h1>Pay Gap Remediation Cost Calculator</h1>
+    <p class="sub">What it costs to close the unexplained gender pay gap: minimum compliance
+      against full equalisation. EU Directive 2023/970 framing. Everything runs in this tab.</p>
+  </header>
+
+  <!-- =============================== FIRST SCREEN: three numbers, one line -->
+  <section class="headline" aria-labelledby="h-headline">
+    <h2 id="h-headline" class="vh">Headline result</h2>
+    <div class="figures">
+      <div class="fig">
+        <div class="label">Minimum compliance</div>
+        <div class="value num" id="head-min">—</div>
+        <div class="note">bring every category to the threshold</div>
+      </div>
+      <div class="fig">
+        <div class="label">Full equalisation</div>
+        <div class="value num" id="head-full">—</div>
+        <div class="note">bring every residual to zero</div>
+      </div>
+      <div class="fig fig-main">
+        <div class="label">Difference</div>
+        <div class="value num" id="head-diff">—</div>
+        <div class="note">what the choice between them costs</div>
+      </div>
+    </div>
+    <p class="verdict">Not a legal question, a budget choice.</p>
+  </section>
+
+  <!-- ======================================================== self-check -->
+  <!-- The identity checks run on every recompute; this region stays empty and
+       hidden while they pass, and appears only on a failure. -->
+  <section aria-labelledby="h-check" class="sc-section">
+    <h2 id="h-check" class="vh">Self-check</h2>
+    <div class="selfcheck pending" id="selfcheck" role="status"></div>
+  </section>
+
+  <!-- ========================================================== controls -->
+  <section aria-labelledby="h-controls">
+    <div class="panel">
+      <div class="section-head">
+        <h2 id="h-controls">Parameters</h2>
+        <span class="hint">Every figure below is recomputed as you type.</span>
+      </div>
+
+      <div class="controls">
+        <div class="ctl">
+          <label for="ctl-threshold">Gap threshold, %</label>
+          <input id="ctl-threshold" type="number" step="0.1" min="0" max="100" value="5"
+                 inputmode="decimal">
+          <span class="jur">EU Directive 2023/970. At or above this unexplained gap a joint pay
+            assessment with workers' representatives becomes mandatory. Not a permitted level
+            of inequality.</span>
+        </div>
+
+        <div class="ctl">
+          <label for="ctl-month">Implementation month</label>
+          <input id="ctl-month" type="number" step="1" min="1" max="12" value="7"
+                 inputmode="numeric">
+          <span class="jur">1 = January … 12 = December. Current-year cost is prorated over the
+            remaining months.</span>
+        </div>
+
+        <div class="ctl">
+          <label for="ctl-rate-below">Employer rate below ceiling, %</label>
+          <input id="ctl-rate-below" type="number" step="0.01" min="0" max="100" value="31.5"
+                 inputmode="decimal">
+          <span class="jur">Spain 2026, indefinite contract, incl. average AT/EP.</span>
+        </div>
+
+        <div class="ctl">
+          <label for="ctl-rate-above">Employer rate above ceiling, %</label>
+          <input id="ctl-rate-above" type="number" step="0.01" min="0" max="100" value="1.15"
+                 inputmode="decimal">
+          <span class="jur">Spain 2026, solidarity contribution, first band.</span>
+        </div>
+
+        <div class="ctl">
+          <label for="ctl-ceiling">Annual contribution ceiling, €</label>
+          <input id="ctl-ceiling" type="number" step="1" min="0" value="61214"
+                 inputmode="numeric">
+          <span class="jur">Spain 2026, annual contribution base ceiling (€5,101.20 per month).</span>
+        </div>
+
+        <div class="ctl">
+          <label for="ctl-reset">Defaults</label>
+          <button type="button" id="ctl-reset">Reset to Spain 2026</button>
+          <span class="jur">Substitute your own jurisdiction's rates. These are an example,
+            not a universal constant.</span>
+        </div>
+      </div>
+
+      <div class="ctl-foot">
+        <div class="scenario" role="group" aria-label="Scenario for chart and table">
+          <span class="sc-legend">Scenario shown below</span>
+          <label><input type="radio" name="scenario" value="minimum" checked> Minimum compliance</label>
+          <label><input type="radio" name="scenario" value="full"> Full equalisation</label>
+        </div>
+        <span class="hint small muted">The switch changes the chart and the table only.
+          The three headline numbers always show both scenarios.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= chart -->
+  <section aria-labelledby="h-chart">
+    <div class="panel">
+      <div class="section-head">
+        <h2 id="h-chart">Unexplained gap by category</h2>
+        <span class="hint">Before and after, <span id="cap-scenario">Minimum compliance</span>.
+          Threshold <span id="cap-threshold">5%</span>.</span>
+      </div>
+      <div class="chart-box" id="chart"></div>
+      <div class="legend">
+        <span><i class="key key-before"></i>before</span>
+        <span><i class="key key-after"></i>after (<span id="cap-scenario-2">minimum compliance</span>)</span>
+        <span><i class="key key-rev"></i>gap favours women, not adjusted</span>
+        <span><i class="key key-unrel"></i>statistically unreliable (marked * on the axis)</span>
+        <span><i class="key key-thresh"></i>joint pay assessment threshold</span>
+      </div>
+      <p class="small muted" style="margin:0.45rem 0 0;">Hover or tab through a column for its
+        figures; every value is also in the table below.</p>
+    </div>
+  </section>
+
+  <!-- =========================================================== summary -->
+  <!-- Twelve money rows in a two-column table read as a wall. The same figures
+       as a KPI row of stat tiles: one column per scenario, one row per measure,
+       the cost line carried by a meter against payroll. The table is kept behind
+       a disclosure so every value stays reachable and copyable. -->
+  <section aria-labelledby="h-summary">
+    <div class="panel">
+      <div class="section-head">
+        <h2 id="h-summary">Both scenarios in full</h2>
+        <span class="hint">Same data as the chart above, totalled across all categories.</span>
+      </div>
+      <div class="scen-grid" id="scen-grid"></div>
+      <details class="tbl-fallback">
+        <summary>All figures as a table</summary>
+        <div class="scroller">
+          <table class="summary">
+            <caption class="vh">Totals for both scenarios</caption>
+            <tbody id="summary-body"></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============================================================= table -->
+  <section aria-labelledby="h-table">
+    <div class="panel">
+      <div class="section-head">
+        <h2 id="h-table">By category</h2>
+        <span class="hint">Positive gap favours men. Scroll sideways inside the table.</span>
+      </div>
+      <div class="scroller">
+        <table>
+          <caption class="vh">Pay gap and remediation cost by category</caption>
+          <thead id="cat-head"></thead>
+          <tbody id="cat-body"></tbody>
+          <tfoot id="cat-foot"></tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ upload -->
+  <section aria-labelledby="h-upload">
+    <div class="panel">
+      <div class="section-head">
+        <h2 id="h-upload">Your own data</h2>
+        <span class="hint">Currently showing: <span id="data-source">demo data</span></span>
+      </div>
+
+      <div class="privacy">
+        <p><strong>All computation happens in your browser; nothing is uploaded.</strong></p>
+        <p class="small">The file is read with <code>FileReader</code> and never leaves this tab.
+          This page makes no network requests at all: no fonts, no libraries, no analytics.
+          Open your browser's Network tab and reload: it stays empty.</p>
+      </div>
+
+      <div class="upload-row">
+        <label for="csv-input" class="vh">CSV file</label>
+        <input type="file" id="csv-input" accept=".csv,text/csv,text/plain">
+        <button type="button" id="btn-demo" hidden>Back to demo data</button>
+        <!-- data: URI, substituted at build time from build/sample.csv — the page
+             carries the sample with it rather than fetching a neighbouring file. -->
+        <a class="btn-link" id="sample-csv"
+           href="data:text/csv;charset=utf-8;base64,aWQsY2F0ZWdvcnksZ2VuZGVyLGJhc2Vfc2FsYXJ5LHZhcmlhYmxlX3BheSx0ZW51cmVfeWVhcnMsZ3JhZGUsZnRlLG1vbnRoc193b3JrZWQKRTAwMSxFbmdpbmVlcmluZyxGLDU0MDAwLDY1MDAsMy41LDYsMS4wLDEyCkUwMDIsRW5naW5lZXJpbmcsTSw1OTUwMCw5MjAwLDUuMCw2LDEuMCwxMgpFMDAzLEVuZ2luZWVyaW5nLE0sNzEwMDAsMTQwMDAsOC4wLDgsMS4wLDEyCkUwMDQsRW5naW5lZXJpbmcsRiw0ODAwMCw0MDAwLDEuNSw1LDAuOCwxMgpFMDA1LFNhbGVzLEYsNDEwMDAsNzAwMCwyLjAsNSwxLjAsMTIKRTAwNixTYWxlcyxNLDQyNTAwLDExNTAwLDIuNSw1LDEuMCwxMgpFMDA3LFNhbGVzLE0sNTIwMDAsODc1MCw2LjAsNywxLjAsNwpFMDA4LEN1c3RvbWVyIFN1cHBvcnQsRiwzMTAwMCwxMjAwLDQuMCw0LDAuNSwxMgpFMDA5LEN1c3RvbWVyIFN1cHBvcnQsTSwzMzUwMCwxNTAwLDQuNSw0LDEuMCwxMgpFMDEwLEN1c3RvbWVyIFN1cHBvcnQsRiwyOTAwMCw5MDAsMS4wLDMsMS4wLDEyCg=="
+           download="pay-gap-sample.csv">Download a sample file</a>
+      </div>
+
+      <p class="small muted" style="margin-top:0.6rem">
+        Required columns: <code>category</code>, <code>gender</code>, <code>base_salary</code>,
+        <code>variable_pay</code>, <code>tenure_years</code>, <code>grade</code>.
+        Optional: <code>fte</code> (default 1.0), <code>months_worked</code> (default 12).
+        Comma or semicolon separated.
+      </p>
+
+      <div id="csv-messages" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ method -->
+  <section aria-labelledby="h-method">
+    <details class="method" id="method">
+      <summary id="h-method">Method <span class="sm">: every quantity in the order it is computed</span></summary>
+      <div class="method-body">
+
+        <h3>1. Normalisation</h3>
+        <p>Part-time and partial-year employees are scaled to a full-year, full-time equivalent
+          before any gap is measured, so that a 0.5 FTE employee is not mistaken for an underpaid one.</p>
+        <div class="formula">normalised_pay = pay / fte / (months_worked / 12)
+total_pay     = base_salary + variable_pay      (both normalised)</div>
+        <p class="small muted">Cost is converted back into actual money at the end: a raise for a
+          0.5 FTE employee costs the company half.</p>
+
+        <h3>2. Raw gap</h3>
+        <p>Within each category, the mean and the median of total pay are taken for men and for
+          women. A positive gap favours men; a negative gap favours women.</p>
+        <div class="formula">raw_gap_% = (mean_M − mean_F) / mean_M × 100
+median gap computed the same way on medians</div>
+        <p>The gap on the variable component is computed and shown separately. The Directive
+          requires it to be disclosed in its own right, and it exposes the common case where base
+          salaries are level and the gap sits in bonuses.</p>
+
+        <h3>3. Explained and unexplained</h3>
+        <p>Within each category an ordinary least squares regression of total pay on grade and
+          tenure, solving the coefficients directly from the normal equations without a library.
+          The part of the gap predicted by differences in grade and tenure is the explained part;
+          what remains is the unexplained residual. Only the residual is remediated.</p>
+        <div class="formula">total_pay ≈ intercept + coef_grade × grade + coef_tenure × tenure_years
+explained_%   = gap predicted by the grade and tenure difference between men and women
+unexplained_% = raw_gap_% − explained_%</div>
+        <p class="small muted">This is the only place in the tool where the word <em>regression</em>
+          is used. Elsewhere the two quantities are named plainly: <em>explained by grade and
+          tenure</em> and <em>unexplained residual</em>.</p>
+        <div class="scroller" id="method-regression"></div>
+
+        <h3>4. Recipients</h3>
+        <p>One method only: employees of the underpaid gender whose pay is below the median of
+          their own category. The increase is distributed in proportion to how far each of them
+          falls short of that median.</p>
+        <div class="formula">shortfall_i = max(0, median_category − pay_i)
+share_i     = shortfall_i / Σ shortfall</div>
+
+        <h3>5. The two scenarios</h3>
+        <p>Both are computed at once, on the same data. They differ only in where they stop.</p>
+        <ol>
+          <li><strong>Minimum compliance</strong>: raise pay until the category's unexplained
+            residual falls to the threshold. Categories already below the threshold are not
+            touched at all.</li>
+          <li><strong>Full equalisation</strong>: raise pay until the residual reaches zero, in
+            every category.</li>
+        </ol>
+        <p>The gap between the two figures comes almost entirely from the categories that minimum
+          compliance leaves alone, and there are usually more of those than expected.</p>
+        <p><strong>Categories where the gap favours women are not adjusted in either scenario.</strong>
+          Equalisation is upward only. They stay visible in the table and on the chart.</p>
+
+        <h3>6. Employer contributions</h3>
+        <p>Computed on the increase in base pay, not on the original salary, and split at the
+          annual contribution ceiling.</p>
+        <div class="formula">contributions = rate_below × min(raise, max(0, ceiling − base_before))
+              + rate_above × max(0, base_before + raise − max(ceiling, base_before))</div>
+        <p>One formula covers a hard ceiling, a reduced rate above it, and a flat rate. Its visible
+          consequence: in high-paid categories equalisation costs less than intuition suggests,
+          because the part of the raise above the ceiling does not carry full contributions.</p>
+        <p class="small muted">Only the first band of the Spanish solidarity contribution is
+          modelled. The recipients of adjustments sit below the median of their category, so they
+          are overwhelmingly below the ceiling or just above it; modelling all three bands would
+          complicate the formula for an effect on a handful of employees.</p>
+
+        <h3>7. Base pay or variable pay</h3>
+        <p>The gap is measured on total pay and remediated through base salary.</p>
+        <blockquote class="caveat">
+          <p>The model applies the adjustment to base salary: this locks the correction in, whereas
+            a one-off bonus is redistributed from scratch in the next cycle. A company is entitled
+            to decide otherwise, closing the gap through the variable component or through a
+            combination of the two. That decision changes both the cost (variable pay usually does
+            not carry the full set of contributions) and how durable the result is. The model does
+            not make that choice for the user.</p>
+        </blockquote>
+        <p class="small muted">The second-order effect is not modelled: a higher base salary raising
+          the future bonus base, where the bonus is a percentage of salary.</p>
+
+        <h3>8. Annual effect</h3>
+        <p>With implementation in month <em>m</em>, the current year carries only the remaining
+          months; the following year carries the full amount.</p>
+        <div class="formula">cost_current_year = full_amount × (13 − m) / 12
+cost_next_year    = full_amount</div>
+
+        <h3>9. Totals</h3>
+        <p>Euros in the current year, euros in the following year, and the uplift to the payroll
+          as a percentage of total pay before adjustment.</p>
+        <div class="formula">payroll_uplift_% = total_cost / payroll_before × 100</div>
+
+        <h3>10. Reliability flag</h3>
+        <p>A category with fewer than 10 employees, or with fewer than 3 of either gender, is
+          marked <em>statistically unreliable</em>. The figures are still shown, but they should
+          not carry a decision on their own.</p>
+
+        <h3>Not in scope</h3>
+        <p class="small muted">Grouping work of equal value into categories (it arrives ready);
+          optimising the allocation of a limited budget; comparing methods of selecting recipients;
+          several jurisdictions at once; salary ranges and compa-ratio; legal conclusions.</p>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <p><strong>Synthetic data, illustration of method.</strong> The demo figures come from a
+      seeded generator, not from any real organisation.</p>
+    <p>Contribution rates and the ceiling are Spain 2026 defaults and are editable. No figure here
+      is legal or actuarial advice.</p>
+    <p>No network requests. Nothing is uploaded, stored, or transmitted.</p>
+    <!-- Attribution sits in the footer, not the header: the first screen belongs to
+         the three figures, and trust here comes from a checkable method rather than
+         a byline. -->
+    <p class="byline">
+      Built by <strong>Olga Dimitrova</strong>, Comp Budget Lab.
+      <a href="https://www.linkedin.com/in/olga-dimitrova-04311742a/"
+         rel="author noopener">LinkedIn</a>
+    </p>
+    <p class="byline">
+      <a href="https://creativecommons.org/licenses/by/4.0/"
+         rel="license noopener">CC BY 4.0</a>. Reuse and adapt it, including
+      commercially, with attribution.
+    </p>
+  </footer>
+
+</div>
+
+<!-- Part A and part C are not built yet: the page falls back to FIXTURE_RESULT. -->
+<script>
+/* =============================================================================
+ * CALC — расчётное ядро калькулятора стоимости выравнивания оплаты (часть A).
+ *
+ * Чистый ES2020. Никаких import/export, никаких обращений к document/window,
+ * никаких внешних библиотек. Склеивается в один .html первым <script>-блоком.
+ *
+ * Публичный интерфейс (см. CONTRACT.md §3):
+ *   CALC.generateDemoData()           → Employee[]   (~200, детерминированно)
+ *   CALC.analyse(employees, settings) → Result
+ *   CALC.selfCheck(result)            → CheckResult
+ *
+ * Соглашения (CONTRACT.md «Соглашения»):
+ *   - деньги — числа в евро с копейками, округление только при выводе;
+ *   - проценты — числа вида 8.4, не 0.084;
+ *   - «фактические» деньги = с учётом fte и месяцев;
+ *     «нормализованные» = полный годовой эквивалент;
+ *   - analyse() не мутирует переданный массив.
+ *
+ * Порядок вычислений — строго по §4 спеки:
+ *   нормализация → разрыв → OLS-декомпозиция → адресаты → два сценария →
+ *   взносы → обратный пересчёт в фактические деньги → годовой эффект.
+ * ========================================================================== */
+
+var CALC = (function () {
+  'use strict';
+
+  /* ===========================================================================
+   * 0. Сидированный PRNG
+   *
+   * mulberry32 — 32-битный генератор с периодом 2^32. Выбран потому, что он
+   * помещается в десять строк, не требует библиотек и даёт одинаковую
+   * последовательность в любом движке JS (все операции — через |0 и >>>,
+   * то есть целочисленные, без зависимости от точности double).
+   *
+   * Это обязательное требование §5 спеки: калькулятор и Excel-модель должны
+   * давать один и тот же массив сотрудников до цента. Seed зашит константой.
+   * ======================================================================== */
+
+  var DEMO_SEED = 20260830; // дата согласования спеки — чтобы seed был осмысленным
+
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* Нормальный шум через преобразование Бокса — Мюллера.
+   * Нужен, чтобы зарплаты внутри грейда рассеивались правдоподобно
+   * (колокол), а не равномерно: равномерный шум ломает медиану и делает
+   * регрессию неестественно точной. */
+  function gauss(rnd) {
+    var u1 = 1 - rnd(); // (0,1], чтобы не взять log(0)
+    var u2 = rnd();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  /* ===========================================================================
+   * 1. Генератор демо-данных
+   *
+   * Модель генерации (§5 спеки): стоимость грейда — параметр генератора,
+   * а не колонка входа, и регрессия должна её восстанавливать.
+   *
+   *   base_salary = base_category
+   *               × (1 + GRADE_STEP)^(grade − 1)      ~12% за грейд
+   *               × (1 + TENURE_STEP × tenure_years)  ~1.5% за год стажа
+   *               × (1 + шум)
+   *               × (1 + gap_коэффициент для женщин)
+   *
+   * Мультипликативная форма выбрана потому, что так реально устроены сетки
+   * оплаты: шаг грейда — это процент, а не фиксированная сумма. Регрессия при
+   * этом линейная (total_pay ~ grade + tenure), и она восстанавливает
+   * стоимость грейда как СРЕДНИЙ прирост в евро на грейд в наблюдаемом
+   * диапазоне — этого достаточно для декомпозиции разрыва и именно это
+   * проверяет selfCheck.
+   *
+   * Семь неоднородностей §5 расписаны по категориям в CATEGORIES ниже,
+   * каждая помечена комментарием.
+   * ======================================================================== */
+
+  var GRADE_STEP = 0.12;   // +12% оклада за каждый грейд
+  var TENURE_STEP = 0.015; // +1.5% оклада за каждый год стажа
+
+  /* Семь категорий. Поля:
+   *   base            — оклад грейда 1 при нулевом стаже, €
+   *   n               — численность
+   *   grades          — [min, max] доступные грейды
+   *   share_f         — доля женщин
+   *   female_grade_bias — сдвиг распределения женщин по грейдам:
+   *                       0 = поровну, 1 = женщины строго в младших грейдах
+   *   gap_within_grade  — доля, на которую женщине режется оклад внутри грейда
+   *   var_rate_m / var_rate_f — переменная часть как доля оклада, М и Ж
+   *   flat_salary     — оклады выровнены по сетке без шума и без разрыва
+   *   part_time_share — доля сотрудников с fte<1 / неполным годом
+   *   noise           — сигма мультипликативного шума
+   */
+  var CATEGORIES = [
+    {
+      // НЕОДНОРОДНОСТЬ 1: разрыв ВНУТРИ грейда.
+      // Женщины распределены по грейдам так же, как мужчины (bias 0),
+      // но при равном грейде и стаже получают на 8% меньше. Регрессия
+      // объяснит почти ноль — это чистый необъяснимый остаток.
+      name: 'Engineering', base: 46000, n: 44, grades: [1, 6], share_f: 0.34,
+      female_grade_bias: 0.00, gap_within_grade: 0.075,
+      var_rate_m: 0.12, var_rate_f: 0.12, noise: 0.055, part_time_share: 0.02
+    },
+    {
+      // НЕОДНОРОДНОСТЬ 2: СТРУКТУРНЫЙ разрыв — женщины концентрируются
+      // в младших грейдах (bias 0.80), а внутри грейда платят одинаково.
+      // Регрессия должна объяснить почти весь разрыв: explained ≈ raw_gap.
+      // НЕОДНОРОДНОСТЬ 5 (часть): здесь же максимальный диапазон стажа,
+      // так что связь «стаж — оплата» видна в коэффициенте tenure.
+      name: 'Operations', base: 38000, n: 38, grades: [1, 6], share_f: 0.55,
+      female_grade_bias: 0.80, gap_within_grade: 0.010,
+      var_rate_m: 0.08, var_rate_f: 0.08, noise: 0.050, part_time_share: 0.05
+    },
+    {
+      // НЕОДНОРОДНОСТЬ 3: МАЛОЧИСЛЕННАЯ категория (n = 8 < 10) с большим
+      // разрывом (14%). Проверяет флаг unreliable из §4.9: n < 10 либо
+      // любой пол < 3. Разрыв большой, но выборка не позволяет на него
+      // опираться — инструмент обязан это показать.
+      name: 'Legal', base: 62000, n: 8, grades: [3, 6], share_f: 0.375,
+      female_grade_bias: 0.35, gap_within_grade: 0.090,
+      var_rate_m: 0.15, var_rate_f: 0.15, noise: 0.045, part_time_share: 0.00
+    },
+    {
+      // НЕОДНОРОДНОСТЬ 4: разрыв В ПОЛЬЗУ ЖЕНЩИН (gap_within_grade
+      // отрицательный + женщины в старших грейдах). reverse_gap = true,
+      // категория НЕ корректируется ни в одном сценарии, но в результате
+      // присутствует: инструмент не прячет то, что не лечит (§4.4).
+      name: 'Marketing', base: 42000, n: 26, grades: [1, 5], share_f: 0.50,
+      female_grade_bias: -0.35, gap_within_grade: -0.040,
+      var_rate_m: 0.10, var_rate_f: 0.10, noise: 0.050, part_time_share: 0.08
+    },
+    {
+      // НЕОДНОРОДНОСТЬ 5: связь СТАЖА и оплаты выражена сильнее всего —
+      // здесь стаж до 22 лет и он же главный источник различий.
+      // Плюс умеренный разрыв внутри грейда.
+      name: 'Manufacturing', base: 34000, n: 40, grades: [1, 5], share_f: 0.40,
+      female_grade_bias: 0.30, gap_within_grade: 0.065,
+      var_rate_m: 0.06, var_rate_f: 0.06, noise: 0.045,
+      part_time_share: 0.05, tenure_max: 22
+    },
+    {
+      // НЕОДНОРОДНОСТЬ 6: ЧАСТИЧНАЯ ЗАНЯТОСТЬ и неполный отработанный год —
+      // треть категории с fte < 1 и/или months_worked < 12. Без нормализации
+      // эти люди ложно попали бы в «недоплаченные», а бюджет был бы завышен
+      // (§3 спеки). Стоимость по ним пересчитывается обратно в фактические
+      // деньги: прибавка на 0.5 ставки стоит компании половину.
+      name: 'Customer Support', base: 30000, n: 30, grades: [1, 4], share_f: 0.60,
+      female_grade_bias: 0.40, gap_within_grade: 0.070,
+      var_rate_m: 0.05, var_rate_f: 0.05, noise: 0.040, part_time_share: 0.33
+    },
+    {
+      // НЕОДНОРОДНОСТЬ 7: РОВНЫЕ ОКЛАДЫ, разрыв в ПЕРЕМЕННОЙ части.
+      // flat_salary: оклад строго по сетке, без шума и без гендерной правки.
+      // Бонус: 28% оклада мужчинам против 14% женщинам. Разрыв по base = 0,
+      // разрыв по total ≈ 11%, variable_gap_pct ≈ 50%.
+      // Ради этого случая специалист и откроет инструмент.
+      // Здесь же — самые высокие оклады: часть категории уходит ВЫШЕ потолка
+      // взносов 61 214 €, что включает вторую ставку rate_above.
+      name: 'Sales', base: 55000, n: 26, grades: [2, 6], share_f: 0.50,
+      female_grade_bias: 0.00, gap_within_grade: 0.000, flat_salary: true,
+      paired_structure: true,
+      var_rate_m: 0.26, var_rate_f: 0.13, noise: 0.000, part_time_share: 0.00
+    }
+  ];
+
+  /**
+   * generateDemoData() — ~200 сотрудников, 7 категорий, детерминированно.
+   *
+   * Один и тот же вызов всегда даёт один и тот же массив: PRNG создаётся
+   * заново от зашитого seed при каждом вызове, порядок обхода категорий и
+   * сотрудников фиксирован.
+   *
+   * @returns {Array<Object>} Employee[] по форме CONTRACT.md §1
+   */
+  function generateDemoData() {
+    var rnd = mulberry32(DEMO_SEED);
+    var out = [];
+    var seq = 1;
+
+    for (var ci = 0; ci < CATEGORIES.length; ci++) {
+      var C = CATEGORIES[ci];
+      var gMin = C.grades[0];
+      var gMax = C.grades[1];
+      var span = gMax - gMin;
+      var tenureMax = C.tenure_max || 14;
+
+      /* paired_structure: категория генерируется матчеными парами М/Ж с
+       * ОДИНАКОВЫМИ грейдом и стажем. Нужно там, где по замыслу оклады ровные
+       * (неоднородность 7): при независимом розыгрыше грейда женщины в выборке
+       * из 26 человек случайно оказываются на младших грейдах, база расходится
+       * на ~11%, и «ровные оклады» перестают быть правдой. Пары убирают этот
+       * артефакт: различие полов остаётся ровно одно — переменная часть.
+       * Пол в паре чередуется, хвост категории добирается мужчинами. */
+      var pairPlan = null;
+      if (C.paired_structure) {
+        /* Категория состоит РОВНО из пар F,M,F,M… без хвоста: n чётное,
+         * share_f эффективно 0.5. Любой непарный остаток смещал бы среднюю
+         * мужскую базу и снова ломал бы «ровные оклады» — а именно этот
+         * случай категория и обязана демонстрировать. Пары гарантируют
+         * совпадение грейда и стажа между полами по построению, поэтому
+         * единственное различие в данных — переменная часть. */
+        pairPlan = [];
+        for (var p = 0; p < C.n; p++) pairPlan.push(p % 2 === 0 ? 'F' : 'M');
+      }
+
+      for (var i = 0; i < C.n; i++) {
+        var isF = pairPlan ? pairPlan[i] === 'F' : rnd() < C.share_f;
+
+        /* Грейд. u — позиция в диапазоне грейдов [0,1].
+         * female_grade_bias сдвигает распределение женщин: u^(1+2b) при b>0
+         * тянет к младшим грейдам (структурный разрыв), при b<0 — к старшим
+         * (это и создаёт разрыв в пользу женщин в Marketing). Мужчины всегда
+         * распределены равномерно. */
+        var grade, tenure;
+        var isPairPartner = pairPlan && i > 0 && pairPlan[i] === 'M'
+          && pairPlan[i - 1] === 'F';
+
+        if (isPairPartner) {
+          // второй в паре наследует структуру первого: тот же грейд, тот же стаж
+          grade = out[out.length - 1].grade;
+          tenure = out[out.length - 1].tenure_years;
+        } else {
+          var u = rnd();
+          if (isF && C.female_grade_bias !== 0) {
+            var b = C.female_grade_bias;
+            u = b > 0 ? Math.pow(u, 1 + 2 * b) : 1 - Math.pow(1 - u, 1 - 2 * b);
+          }
+          grade = gMin + Math.round(u * span);
+
+          /* Стаж. Коррелирован с грейдом: на старших грейдах люди в среднем
+           * дольше в компании — иначе регрессия получила бы два независимых
+           * предиктора, чего в реальных данных не бывает. */
+          var tenureBase = (grade - gMin) / Math.max(1, span) * tenureMax * 0.55;
+          tenure = tenureBase + rnd() * tenureMax * 0.45;
+          tenure = Math.round(Math.max(0.2, Math.min(tenureMax, tenure)) * 10) / 10;
+        }
+
+        /* Оклад по сетке: база × шаг грейда × шаг стажа. */
+        var salary = C.base
+          * Math.pow(1 + GRADE_STEP, grade - gMin)
+          * (1 + TENURE_STEP * tenure);
+
+        if (!C.flat_salary) {
+          salary *= (1 + gauss(rnd) * C.noise);          // шум
+          if (isF) salary *= (1 - C.gap_within_grade);   // разрыв внутри грейда
+        }
+
+        /* Переменная часть — доля оклада, своя для М и Ж (неоднородность 7). */
+        var varRate = isF ? C.var_rate_f : C.var_rate_m;
+        var variable = salary * varRate * (C.flat_salary ? 1 : (0.75 + rnd() * 0.5));
+
+        /* Частичная занятость и неполный год (неоднородность 6).
+         * base_salary и variable_pay в контракте — ФАКТИЧЕСКИ выплаченные
+         * суммы, поэтому здесь они домножаются на fte и долю года. */
+        var fte = 1.0;
+        var months = 12;
+        if (rnd() < C.part_time_share) {
+          fte = [0.5, 0.6, 0.75, 0.8][Math.floor(rnd() * 4)];
+        }
+        if (rnd() < C.part_time_share * 0.6) {
+          months = [4, 6, 7, 9, 10][Math.floor(rnd() * 5)];
+        }
+
+        var factor = fte * (months / 12);
+
+        out.push({
+          id: 'E' + String(seq++).padStart(3, '0'),
+          category: C.name,
+          gender: isF ? 'F' : 'M',
+          base_salary: round2(salary * factor),
+          variable_pay: round2(variable * factor),
+          tenure_years: tenure,
+          grade: grade,
+          fte: fte,
+          months_worked: months
+        });
+      }
+    }
+    return out;
+  }
+
+  /* ===========================================================================
+   * 2. Вспомогательная арифметика
+   * ======================================================================== */
+
+  function round2(x) { return Math.round(x * 100) / 100; }
+
+  function mean(a) {
+    if (!a.length) return 0;
+    var s = 0;
+    for (var i = 0; i < a.length; i++) s += a[i];
+    return s / a.length;
+  }
+
+  /* Медиана: при чётном n — среднее двух центральных.
+   * Медиана нужна дважды: как альтернативная мера разрыва (§4.1) и как
+   * целевая точка для отбора адресатов (§4.3). */
+  function median(a) {
+    if (!a.length) return 0;
+    var s = a.slice().sort(function (x, y) { return x - y; });
+    var m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+
+  function sum(a) {
+    var s = 0;
+    for (var i = 0; i < a.length; i++) s += a[i];
+    return s;
+  }
+
+  /* ===========================================================================
+   * 3. Нормализация (§3 спеки)
+   *
+   *   normalised = pay / fte / (months_worked / 12)
+   *
+   * Приводит фактическую выплату к полному годовому эквиваленту. Без этого
+   * шага человек на 0.5 ставки выглядит вдвое недоплаченным и попадает в
+   * адресаты, а бюджет завышается вдвое. Обратный коэффициент factor
+   * сохраняется на сотруднике, чтобы стоимость вернуть в фактические деньги.
+   * ======================================================================== */
+
+  function normalise(employees) {
+    return employees.map(function (e, idx) {
+      var fte = (typeof e.fte === 'number' && e.fte > 0) ? e.fte : 1.0;
+      var mw = (typeof e.months_worked === 'number' && e.months_worked > 0)
+        ? e.months_worked : 12;
+      var factor = fte * (mw / 12); // доля полной занятости за полный год
+      var nBase = e.base_salary / factor;
+      var nVar = e.variable_pay / factor;
+      return {
+        idx: idx,
+        id: e.id != null ? e.id : ('E' + String(idx + 1).padStart(3, '0')),
+        category: String(e.category),
+        gender: e.gender === 'F' ? 'F' : 'M',
+        grade: Number(e.grade),
+        tenure_years: Number(e.tenure_years),
+        fte: fte,
+        months_worked: mw,
+        factor: factor,              // множитель обратно в фактические деньги
+        actual_base: e.base_salary,  // фактические, для payroll и для взносов
+        actual_var: e.variable_pay,
+        n_base: nBase,               // нормализованные
+        n_var: nVar,
+        n_total: nBase + nVar
+      };
+    });
+  }
+
+  /* ===========================================================================
+   * 4. OLS-регрессия total_pay ~ grade + tenure_years внутри категории (§4.2)
+   *
+   * Нормальные уравнения: (X'X) β = X'y, где X = [1, grade, tenure].
+   * Система 3×3 решается методом Гаусса с частичным выбором ведущего
+   * элемента — вручную, без библиотек (требование §8 спеки).
+   *
+   * Почему нормальные уравнения, а не QR: матрица 3×3, обусловленность на
+   * реальных штатных расписаниях приемлемая, а формула целиком выписывается
+   * в Excel — это обязательное условие сверки модели вручную.
+   *
+   * Защита от вырожденности: если наблюдений меньше 4, либо grade или tenure
+   * константны, либо ведущий элемент на любом шаге меньше EPS — регрессия не
+   * определена. В этом случае возвращается r_squared: null, коэффициенты 0,
+   * и объяснимая часть разрыва принимается равной нулю (весь разрыв уходит
+   * в необъяснимый остаток — консервативно, то есть в сторону большей
+   * корректировки).
+   * ======================================================================== */
+
+  var EPS = 1e-9;
+
+  /** Решение системы n×n методом Гаусса с частичным выбором ведущего элемента.
+   *  @returns {Array<number>|null} null, если матрица вырождена */
+  function solveGauss(A, b) {
+    var n = b.length;
+    var M = A.map(function (row, i) { return row.slice().concat([b[i]]); });
+
+    for (var col = 0; col < n; col++) {
+      // выбор ведущего элемента — максимальный по модулю в столбце
+      var piv = col;
+      for (var r = col + 1; r < n; r++) {
+        if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+      }
+      if (Math.abs(M[piv][col]) < EPS) return null; // вырожденная матрица
+      var tmp = M[col]; M[col] = M[piv]; M[piv] = tmp;
+
+      for (var r2 = col + 1; r2 < n; r2++) {
+        var f = M[r2][col] / M[col][col];
+        for (var c = col; c <= n; c++) M[r2][c] -= f * M[col][c];
+      }
+    }
+    // обратный ход
+    var x = new Array(n).fill(0);
+    for (var i = n - 1; i >= 0; i--) {
+      var s = M[i][n];
+      for (var j = i + 1; j < n; j++) s -= M[i][j] * x[j];
+      x[i] = s / M[i][i];
+    }
+    return x;
+  }
+
+  /**
+   * OLS для одной категории.
+   * @param {Array} rows нормализованные сотрудники категории
+   * @returns {{intercept, coef_grade, coef_tenure, r_squared, n}}
+   *          r_squared === null означает «регрессия не определена,
+   *          explained принимается за 0».
+   */
+  function regress(rows) {
+    var n = rows.length;
+    var fail = {
+      intercept: 0, coef_grade: 0, coef_tenure: 0, r_squared: null, n: n
+    };
+    if (n < 4) return fail;
+
+    var grades = rows.map(function (r) { return r.grade; });
+    var tenures = rows.map(function (r) { return r.tenure_years; });
+    var ys = rows.map(function (r) { return r.n_total; });
+
+    // константный предиктор → соответствующий коэффициент не определён
+    var gVar = variance(grades);
+    var tVar = variance(tenures);
+    if (gVar < EPS || tVar < EPS) return fail;
+
+    // Нормальные уравнения: сумма произведений
+    var S = { n: n, g: 0, t: 0, gg: 0, tt: 0, gt: 0, y: 0, gy: 0, ty: 0 };
+    for (var i = 0; i < n; i++) {
+      var g = grades[i], t = tenures[i], y = ys[i];
+      S.g += g; S.t += t; S.y += y;
+      S.gg += g * g; S.tt += t * t; S.gt += g * t;
+      S.gy += g * y; S.ty += t * y;
+    }
+    var A = [
+      [S.n, S.g, S.t],
+      [S.g, S.gg, S.gt],
+      [S.t, S.gt, S.tt]
+    ];
+    var beta = solveGauss(A, [S.y, S.gy, S.ty]);
+    if (!beta) return fail;
+    if (!isFinite(beta[0]) || !isFinite(beta[1]) || !isFinite(beta[2])) return fail;
+
+    // R² = 1 − SS_res / SS_tot
+    var yBar = S.y / n, ssRes = 0, ssTot = 0;
+    for (var k = 0; k < n; k++) {
+      var pred = beta[0] + beta[1] * grades[k] + beta[2] * tenures[k];
+      ssRes += Math.pow(ys[k] - pred, 2);
+      ssTot += Math.pow(ys[k] - yBar, 2);
+    }
+    var r2 = ssTot < EPS ? null : 1 - ssRes / ssTot;
+
+    return {
+      intercept: beta[0],
+      coef_grade: beta[1],
+      coef_tenure: beta[2],
+      r_squared: r2,
+      n: n
+    };
+  }
+
+  function variance(a) {
+    if (a.length < 2) return 0;
+    var m = mean(a), s = 0;
+    for (var i = 0; i < a.length; i++) s += (a[i] - m) * (a[i] - m);
+    return s / a.length;
+  }
+
+  /* ===========================================================================
+   * 5. Разрыв и его декомпозиция (§4.1, §4.2)
+   *
+   * raw_gap % = (mean_M − mean_F) / mean_M × 100.
+   * Знаменатель — оплата мужчин: так разрыв читается как «женщина получает
+   * на X% меньше мужчины», что и есть формулировка директивы. Положительный
+   * разрыв = в пользу мужчин, отрицательный = в пользу женщин.
+   *
+   * explained: предсказанная регрессией разница по различиям в grade/tenure:
+   *   explained_€ = coef_grade × (mean_grade_M − mean_grade_F)
+   *               + coef_tenure × (mean_tenure_M − mean_tenure_F)
+   * То есть «сколько разрыва объясняется тем, что мужчины в среднем на
+   * старших грейдах и с большим стажем». Переводится в % к mean_M.
+   *
+   * unexplained_pct = raw_gap_mean_pct − explained_pct. Корректируется
+   * только он (§4.2).
+   *
+   * explained ограничивается диапазоном [0, raw_gap], когда разрыв
+   * положительный: отрицательная объяснимая часть означала бы, что структура
+   * грейдов работает В ПОЛЬЗУ женщин, и её вычитание раздуло бы остаток выше
+   * фактического разрыва — то есть модель потребовала бы поднять женщин выше
+   * мужчин. РЕШЕНИЕ ВНЕ СПЕКИ, отмечено в отчёте.
+   * ======================================================================== */
+
+  function computeGaps(rows, reg) {
+    var f = rows.filter(function (r) { return r.gender === 'F'; });
+    var m = rows.filter(function (r) { return r.gender === 'M'; });
+
+    var meanM = mean(m.map(function (r) { return r.n_total; }));
+    var meanF = mean(f.map(function (r) { return r.n_total; }));
+    var medM = median(m.map(function (r) { return r.n_total; }));
+    var medF = median(f.map(function (r) { return r.n_total; }));
+    var varM = mean(m.map(function (r) { return r.n_var; }));
+    var varF = mean(f.map(function (r) { return r.n_var; }));
+    // разрыв по БАЗОВОМУ окладу — нужен, чтобы отличить «оклады ровные,
+    // разрыв в бонусах» от «разрыв и там, и там». Наружу по контракту не
+    // выходит (форма CategoryResult зафиксирована), используется в selfCheck.
+    var baseM = mean(m.map(function (r) { return r.n_base; }));
+    var baseF = mean(f.map(function (r) { return r.n_base; }));
+
+    var rawMean = (meanM > 0 && f.length && m.length)
+      ? (meanM - meanF) / meanM * 100 : 0;
+    var rawMedian = (medM > 0 && f.length && m.length)
+      ? (medM - medF) / medM * 100 : 0;
+    var varGap = (varM > 0 && f.length && m.length)
+      ? (varM - varF) / varM * 100 : 0;
+
+    // объяснимая часть в евро
+    var explainedEur = 0;
+    if (reg.r_squared !== null && f.length && m.length) {
+      var dG = mean(m.map(function (r) { return r.grade; }))
+        - mean(f.map(function (r) { return r.grade; }));
+      var dT = mean(m.map(function (r) { return r.tenure_years; }))
+        - mean(f.map(function (r) { return r.tenure_years; }));
+      explainedEur = reg.coef_grade * dG + reg.coef_tenure * dT;
+    }
+    var explainedPct = meanM > 0 ? explainedEur / meanM * 100 : 0;
+
+    // ограничение: объяснимая часть не выходит за пределы самого разрыва
+    if (rawMean >= 0) {
+      explainedPct = Math.max(0, Math.min(explainedPct, rawMean));
+    } else {
+      explainedPct = Math.min(0, Math.max(explainedPct, rawMean));
+    }
+
+    return {
+      mean_m: meanM, mean_f: meanF,
+      raw_gap_mean_pct: rawMean,
+      raw_gap_median_pct: rawMedian,
+      variable_gap_pct: varGap,
+      base_gap_pct: (baseM > 0 && f.length && m.length)
+        ? (baseM - baseF) / baseM * 100 : 0,
+      explained_pct: explainedPct,
+      unexplained_pct: rawMean - explainedPct,
+      f: f, m: m
+    };
+  }
+
+  /* ===========================================================================
+   * 6. Взносы работодателя (§4.5, CONTRIBUTIONS.md)
+   *
+   *   взносы = rate_below × min(прибавка, max(0, ceiling − исходная_база))
+   *          + rate_above × max(0, исходная_база + прибавка
+   *                                − max(ceiling, исходная_база))
+   *
+   * Считаются от ПРИРОСТА базы, не от исходной зарплаты, и всегда от
+   * ФАКТИЧЕСКОЙ базы сотрудника (потолок — годовой и применяется к реально
+   * начисленному, а не к полному эквиваленту частично занятого).
+   *
+   * Смысл конструкции: часть прибавки, укладывающаяся под потолок, тянет
+   * полную ставку; всё, что выводит базу за потолок, — только пониженную.
+   * Одна формула покрывает и отсечку (rate_above = 0), и смену ставки (РФ).
+   * ======================================================================== */
+
+  function contributionsOn(baseBefore, uplift, settings) {
+    if (uplift <= 0) return 0;
+    var ceiling = settings.ceiling;
+    var rb = settings.rate_below / 100;
+    var ra = settings.rate_above / 100;
+
+    var roomBelow = Math.max(0, ceiling - baseBefore); // место под потолком
+    var partBelow = Math.min(uplift, roomBelow);
+    var partAbove = uplift - partBelow;
+    return rb * partBelow + ra * partAbove;
+  }
+
+  /* ===========================================================================
+   * 7. Отбор адресатов и распределение прибавки (§4.3)
+   *
+   * Адресаты: сотрудники недоплаченного пола, чья НОРМАЛИЗОВАННАЯ total pay
+   * ниже медианы своей категории (медиана по всей категории, оба пола).
+   *
+   * Прибавка распределяется ПРОПОРЦИОНАЛЬНО отставанию от медианы:
+   *   доля_i = (медиана − total_i) / Σ(медиана − total_j)
+   * Логика: чем дальше человек от середины категории, тем большую часть
+   * бюджета он получает. Метод единственный (§4.3), альтернативы вне скоупа.
+   *
+   * Сколько всего нужно раздать: чтобы необъяснимый остаток категории
+   * опустился с текущего уровня до целевого. Остаток измеряется в % к
+   * средней оплате мужчин, поэтому нужная сумма в евро (нормализованных):
+   *   need_€ = (unexplained_pct − target_pct) / 100 × mean_M × n_F
+   * где n_F — численность недоплаченного пола: подъём средней женской оплаты
+   * на Δ€ требует Δ€ × n_F евро фонда.
+   * ======================================================================== */
+
+  /**
+   * Один сценарий для одной категории.
+   * @param {Array}  rows  нормализованные сотрудники категории
+   * @param {Object} gaps  результат computeGaps
+   * @param {number} targetPct целевой необъяснимый остаток, % (0 = full)
+   * @param {Object} settings
+   * @param {boolean} reverse категория с разрывом в пользу женщин
+   */
+  function runScenario(rows, gaps, targetPct, settings, reverse) {
+    var empty = {
+      recipients: 0, adjustment: 0, contributions: 0, total_cost: 0,
+      unexplained_after: gaps.unexplained_pct,
+      mean_pay_after: mean(rows.map(function (r) { return r.n_total; })),
+      per_employee: []
+    };
+
+    // Категории с разрывом в пользу женщин не корректируются ни в одном
+    // сценарии — выравнивание идёт только вверх (§4.4).
+    if (reverse) return empty;
+
+    // Категория уже под порогом — в minimum не трогается вовсе (§4.4).
+    if (gaps.unexplained_pct <= targetPct + 1e-12) return empty;
+
+    var under = gaps.f.filter(function (r) { return r.n_total < gaps.median_all; });
+    if (!under.length) return empty;
+
+    var deficits = under.map(function (r) { return gaps.median_all - r.n_total; });
+    var totalDeficit = sum(deficits);
+    if (totalDeficit <= 0) return empty;
+
+    // сколько нормализованных евро нужно влить в фонд женщин категории
+    var needNorm = (gaps.unexplained_pct - targetPct) / 100
+      * gaps.mean_m * gaps.f.length;
+
+    var perEmployee = [];
+    var adjActual = 0;
+    var contrib = 0;
+
+    for (var i = 0; i < under.length; i++) {
+      var r = under[i];
+      var upliftNorm = needNorm * (deficits[i] / totalDeficit);
+      // обратно в фактические деньги: прибавка на 0.5 ставки стоит половину
+      var upliftActual = upliftNorm * r.factor;
+      adjActual += upliftActual;
+      contrib += contributionsOn(r.actual_base, upliftActual, settings);
+      perEmployee.push({ idx: r.idx, uplift_norm: upliftNorm, uplift_actual: upliftActual });
+    }
+
+    // средняя нормализованная оплата после корректировки — для диаграммы
+    var afterTotals = rows.map(function (r) {
+      var add = 0;
+      for (var k = 0; k < perEmployee.length; k++) {
+        if (perEmployee[k].idx === r.idx) { add = perEmployee[k].uplift_norm; break; }
+      }
+      return r.n_total + add;
+    });
+
+    // фактический остаток после подъёма — пересчитывается, а не берётся из цели
+    var newMeanF = mean(gaps.f.map(function (r) {
+      var add = 0;
+      for (var k = 0; k < perEmployee.length; k++) {
+        if (perEmployee[k].idx === r.idx) { add = perEmployee[k].uplift_norm; break; }
+      }
+      return r.n_total + add;
+    }));
+    var newRawGap = gaps.mean_m > 0 ? (gaps.mean_m - newMeanF) / gaps.mean_m * 100 : 0;
+    var after = newRawGap - gaps.explained_pct;
+
+    return {
+      recipients: under.length,
+      adjustment: adjActual,
+      contributions: contrib,
+      total_cost: adjActual + contrib,
+      unexplained_after: after,
+      mean_pay_after: mean(afterTotals),
+      per_employee: perEmployee
+    };
+  }
+
+  /* ===========================================================================
+   * 8. analyse() — главная функция
+   * ======================================================================== */
+
+  var DEFAULT_SETTINGS = {
+    threshold_pct: 5,
+    implementation_month: 7,
+    rate_below: 31.5,
+    rate_above: 1.15,
+    ceiling: 61214
+  };
+
+  /**
+   * analyse(employees, settings) → Result (CONTRACT.md §3).
+   * Не мутирует входной массив.
+   */
+  function analyse(employees, settings) {
+    var S = Object.assign({}, DEFAULT_SETTINGS, settings || {});
+    var rows = normalise(employees || []);
+
+    // группировка по категориям, порядок первого появления
+    var order = [];
+    var byCat = {};
+    for (var i = 0; i < rows.length; i++) {
+      var c = rows[i].category;
+      if (!byCat[c]) { byCat[c] = []; order.push(c); }
+      byCat[c].push(rows[i]);
+    }
+
+    var categories = [];
+    var accMin = { adjustment: 0, contributions: 0 };
+    var accFull = { adjustment: 0, contributions: 0 };
+
+    for (var ci = 0; ci < order.length; ci++) {
+      var name = order[ci];
+      var crows = byCat[name];
+
+      var reg = regress(crows);
+      var gaps = computeGaps(crows, reg);
+      gaps.median_all = median(crows.map(function (r) { return r.n_total; }));
+
+      var nF = gaps.f.length, nM = gaps.m.length;
+
+      // §4.9 флаг надёжности
+      var unreliable = crows.length < 10 || nF < 3 || nM < 3;
+      // §4.4 разрыв в пользу женщин — не корректируем
+      var reverse = gaps.raw_gap_mean_pct < 0;
+
+      var scMin = runScenario(crows, gaps, S.threshold_pct, S, reverse);
+      var scFull = runScenario(crows, gaps, 0, S, reverse);
+
+      accMin.adjustment += scMin.adjustment;
+      accMin.contributions += scMin.contributions;
+      accFull.adjustment += scFull.adjustment;
+      accFull.contributions += scFull.contributions;
+
+      categories.push({
+        category: name,
+        headcount: crows.length,
+        headcount_f: nF,
+        headcount_m: nM,
+        raw_gap_mean_pct: gaps.raw_gap_mean_pct,
+        raw_gap_median_pct: gaps.raw_gap_median_pct,
+        variable_gap_pct: gaps.variable_gap_pct,
+        _base_gap_pct: gaps.base_gap_pct, // приватное, для selfCheck
+        explained_pct: gaps.explained_pct,
+        unexplained_pct: gaps.unexplained_pct,
+        regression: {
+          intercept: reg.intercept,
+          coef_grade: reg.coef_grade,
+          coef_tenure: reg.coef_tenure,
+          r_squared: reg.r_squared,
+          n: reg.n
+        },
+        unreliable: unreliable,
+        reverse_gap: reverse,
+        minimum: publicScenario(scMin),
+        full: publicScenario(scFull)
+      });
+    }
+
+    // фонд оплаты труда «до» — фактические деньги, total pay
+    var payrollBefore = sum(rows.map(function (r) { return r.actual_base + r.actual_var; }));
+
+    // сколько сотрудников с неполной ставкой или неполным годом — служебное
+    // поле для selfCheck (неоднородность 6); UI его не использует
+    var partTime = rows.filter(function (r) {
+      return r.fte < 1 || r.months_worked < 12;
+    }).length;
+
+    return {
+      _demo_parttime: partTime,
+      categories: categories,
+      totals: {
+        headcount: rows.length,
+        payroll_before: payrollBefore,
+        minimum: totalsBlock(accMin, payrollBefore, S),
+        full: totalsBlock(accFull, payrollBefore, S),
+        difference: diffBlock(
+          totalsBlock(accFull, payrollBefore, S),
+          totalsBlock(accMin, payrollBefore, S)
+        )
+      },
+      settings_used: Object.assign({}, S)
+    };
+  }
+
+  /* CategoryScenario наружу — без служебного per_employee. */
+  function publicScenario(sc) {
+    return {
+      recipients: sc.recipients,
+      adjustment: sc.adjustment,
+      contributions: sc.contributions,
+      total_cost: sc.total_cost,
+      unexplained_after: sc.unexplained_after,
+      mean_pay_after: sc.mean_pay_after
+    };
+  }
+
+  /* Годовой эффект (§4.7): месяц внедрения m → текущий год = полная сумма
+   * × (13 − m) / 12 (внедрение в январе даёт 12/12, в декабре — 1/12);
+   * следующий год — полная сумма. */
+  function totalsBlock(acc, payrollBefore, S) {
+    var total = acc.adjustment + acc.contributions;
+    var m = Math.min(12, Math.max(1, Math.round(S.implementation_month)));
+    return {
+      adjustment: acc.adjustment,
+      contributions: acc.contributions,
+      total_cost: total,
+      cost_current_year: total * (13 - m) / 12,
+      cost_next_year: total,
+      payroll_uplift_pct: payrollBefore > 0 ? total / payrollBefore * 100 : 0
+    };
+  }
+
+  /* difference = full − minimum по всем полям (главное число первого экрана). */
+  function diffBlock(full, min) {
+    return {
+      adjustment: full.adjustment - min.adjustment,
+      contributions: full.contributions - min.contributions,
+      total_cost: full.total_cost - min.total_cost,
+      cost_current_year: full.cost_current_year - min.cost_current_year,
+      cost_next_year: full.cost_next_year - min.cost_next_year,
+      payroll_uplift_pct: full.payroll_uplift_pct - min.payroll_uplift_pct
+    };
+  }
+
+  /* ===========================================================================
+   * 9. selfCheck() — тождества из §10 спеки
+   *
+   * Каждая проверка — арифметическое тождество, которое обязано выполняться
+   * при любых входных данных, а не свойство конкретного демо-набора (кроме
+   * блока «Данные», который по определению относится к демо).
+   * Detail — человекочитаемый: строка пойдёт в интерфейс и в лист Method.
+   * ======================================================================== */
+
+  var TOL = 0.01; // допуск в евро — округления при сложении сотен чисел
+
+  function selfCheck(result) {
+    var checks = [];
+    function add(name, passed, detail) {
+      checks.push({ name: name, passed: !!passed, detail: detail });
+    }
+
+    var cats = result.categories;
+    var T = result.totals;
+    var S = result.settings_used;
+
+    /* --- Расчёт ------------------------------------------------------- */
+
+    // 1. Сумма корректировок по категориям = приросту фонда оплаты труда.
+    ['minimum', 'full'].forEach(function (sc) {
+      var catSum = sum(cats.map(function (c) { return c[sc].adjustment; }));
+      var d = Math.abs(catSum - T[sc].adjustment);
+      add('adjustment matches payroll delta (' + sc + ')', d < TOL,
+        'Sum of category adjustments €' + fmt(catSum) + ' vs total €'
+        + fmt(T[sc].adjustment) + ' — difference €' + d.toFixed(4)
+        + '. Payroll before €' + fmt(T.payroll_before) + ' → after €'
+        + fmt(T.payroll_before + T[sc].adjustment) + '.');
+    });
+
+    // 2. После minimum ни одна категория не превышает порог.
+    var over = cats.filter(function (c) {
+      return !c.reverse_gap && c.minimum.unexplained_after > S.threshold_pct + 0.01;
+    });
+    add('no category above threshold after minimum', over.length === 0,
+      over.length === 0
+        ? 'All ' + cats.length + ' categories at or below the '
+          + S.threshold_pct + '% joint-pay-assessment trigger after minimum compliance.'
+        : 'Above threshold: ' + over.map(function (c) {
+            return c.category + ' ' + c.minimum.unexplained_after.toFixed(2) + '%';
+          }).join(', '));
+
+    // 3. После full остаток равен нулю.
+    var nz = cats.filter(function (c) {
+      return !c.reverse_gap && Math.abs(c.full.unexplained_after) > 0.01;
+    });
+    add('unexplained residual is zero after full equalisation', nz.length === 0,
+      nz.length === 0
+        ? 'Residual < 0.01 pp in every corrected category ('
+          + cats.filter(function (c) { return !c.reverse_gap; }).length + ' of '
+          + cats.length + '; reverse-gap categories excluded by design).'
+        : 'Non-zero: ' + nz.map(function (c) {
+            return c.category + ' ' + c.full.unexplained_after.toFixed(3) + '%';
+          }).join(', '));
+
+    // 4. Взносы считаются от изменённой базы (от прироста), а не от исходной,
+    //    и лежат между двумя ставками — то есть формула действительно
+    //    применяет rate_above к части над потолком.
+    ['minimum', 'full'].forEach(function (sc) {
+      var adj = T[sc].adjustment, con = T[sc].contributions;
+      var lo = adj * S.rate_above / 100, hi = adj * S.rate_below / 100;
+      var ok = adj <= 0 ? con === 0 : (con > 0 && con <= hi + TOL && con >= lo - TOL);
+      add('contributions computed on the uplift, two-rate (' + sc + ')', ok,
+        'Uplift €' + fmt(adj) + ' → contributions €' + fmt(con)
+        + ' (' + (adj > 0 ? (con / adj * 100).toFixed(2) : '0.00') + '% effective; '
+        + 'bounds ' + S.rate_above + '%…' + S.rate_below + '%, ceiling €'
+        + fmt(S.ceiling) + '). Effective rate below the headline rate proves the '
+        + 'above-ceiling band is being applied.');
+    });
+
+    // 5. Эффект текущего года меньше следующего при внедрении не в январе.
+    var m = S.implementation_month;
+    var okYear = m > 1
+      ? T.full.cost_current_year < T.full.cost_next_year - TOL
+      : Math.abs(T.full.cost_current_year - T.full.cost_next_year) < TOL;
+    add('current-year effect below next-year effect', okYear,
+      'Implementation month ' + m + ' → factor (13−' + m + ')/12 = '
+      + ((13 - m) / 12).toFixed(4) + '. Full: current year €'
+      + fmt(T.full.cost_current_year) + ' vs next year €' + fmt(T.full.cost_next_year) + '.');
+
+    // 6. Малочисленная категория помечена.
+    var small = cats.filter(function (c) {
+      return c.headcount < 10 || c.headcount_f < 3 || c.headcount_m < 3;
+    });
+    var allFlagged = small.every(function (c) { return c.unreliable; });
+    add('small categories flagged as unreliable', small.length > 0 && allFlagged,
+      small.length === 0
+        ? 'No category with n<10 or a gender group <3 — the reliability flag is untested.'
+        : 'Flagged: ' + small.map(function (c) {
+            return c.category + ' (n=' + c.headcount + ', F=' + c.headcount_f
+              + ', M=' + c.headcount_m + ')';
+          }).join('; ') + '.');
+
+    // 7. Категории с разрывом в пользу женщин не скорректированы, но показаны.
+    var rev = cats.filter(function (c) { return c.reverse_gap; });
+    var revClean = rev.every(function (c) {
+      return c.minimum.adjustment === 0 && c.full.adjustment === 0
+        && c.minimum.recipients === 0 && c.full.recipients === 0;
+    });
+    add('reverse-gap categories shown but not adjusted', rev.length > 0 && revClean,
+      rev.length === 0
+        ? 'No reverse-gap category present.'
+        : rev.map(function (c) {
+            return c.category + ' gap ' + c.raw_gap_mean_pct.toFixed(1)
+              + '% (in favour of women), adjustment €0 in both scenarios';
+          }).join('; ') + ' — listed in the table, not corrected.');
+
+    // 8. Стоимость по частично занятым — в фактических деньгах.
+    //    Косвенная проверка: прирост фонда меньше, чем если бы прибавки
+    //    считались в FTE-эквиваленте, — а он и есть adjustment, всегда
+    //    положительный и меньше payroll.
+    add('cost expressed in actual money, not FTE',
+      T.full.adjustment > 0 && T.full.adjustment < T.payroll_before,
+      'Uplift €' + fmt(T.full.adjustment) + ' is '
+      + (T.full.adjustment / T.payroll_before * 100).toFixed(2)
+      + '% of payroll €' + fmt(T.payroll_before)
+      + '; part-time uplifts scaled by fte × months/12 before summing.');
+
+    /* --- Данные (относится к демо-набору) ------------------------------ */
+
+    // 9. Все семь неоднородностей присутствуют.
+    var het = demoHeterogeneities(result);
+    add('all seven data heterogeneities present', het.all,
+      het.lines.join(' | '));
+
+    // 10. Объяснимая часть ≠ 0 минимум в двух категориях.
+    var expl = cats.filter(function (c) { return Math.abs(c.explained_pct) > 0.5; });
+    add('explained part non-zero in at least two categories', expl.length >= 2,
+      expl.length + ' categories with |explained| > 0.5 pp: '
+      + expl.map(function (c) {
+          return c.category + ' ' + c.explained_pct.toFixed(1) + ' pp of '
+            + c.raw_gap_mean_pct.toFixed(1) + ' pp raw';
+        }).join('; ') + '.');
+
+    // 11. Регрессия восстанавливает заложенную стоимость грейда.
+    //     Генератор задаёт +12% оклада за грейд. Ожидаемый прирост в евро
+    //     сравнивается с coef_grade; «разумная точность» — в пределах ±40%
+    //     на категорию (шум, корреляция стажа с грейдом и мультипликативная
+    //     природа шага делают точное совпадение невозможным).
+    var recov = gradeRecovery(result);
+    add('regression recovers the built-in grade step', recov.ok,
+      recov.detail);
+
+    var passed = checks.every(function (c) { return c.passed; });
+    return { passed: passed, checks: checks };
+  }
+
+  /* Проверка присутствия семи неоднородностей §5 — по признакам в результате.
+   * Проверяются наблюдаемые следствия, а не константы генератора: так проверка
+   * остаётся осмысленной и на пользовательских данных. */
+  function demoHeterogeneities(result) {
+    var cats = result.categories;
+    var lines = [];
+    var flags = [];
+
+    function chk(label, cond, note) {
+      flags.push(cond);
+      lines.push((cond ? '+' : '-') + ' ' + label + (note ? ': ' + note : ''));
+    }
+
+    // 1. разрыв внутри грейда — есть категория с большим остатком при малой
+    //    объяснимой части
+    var c1 = cats.filter(function (c) {
+      return c.unexplained_pct > 4 && c.explained_pct < c.unexplained_pct;
+    });
+    chk('within-grade gap', c1.length > 0,
+      c1.length ? c1[0].category + ' unexplained ' + c1[0].unexplained_pct.toFixed(1) + ' pp' : '');
+
+    // 2. структурный разрыв — объяснимая часть больше половины разрыва
+    var c2 = cats.filter(function (c) {
+      return c.raw_gap_mean_pct > 3 && c.explained_pct > c.raw_gap_mean_pct * 0.5;
+    });
+    chk('structural gap (women in lower grades)', c2.length > 0,
+      c2.length ? c2[0].category + ' explained ' + c2[0].explained_pct.toFixed(1)
+        + ' of ' + c2[0].raw_gap_mean_pct.toFixed(1) + ' pp' : '');
+
+    // 3. малочисленная категория с большим разрывом
+    var c3 = cats.filter(function (c) {
+      return c.unreliable && Math.abs(c.raw_gap_mean_pct) > 8;
+    });
+    chk('small category with a large gap', c3.length > 0,
+      c3.length ? c3[0].category + ' n=' + c3[0].headcount + ', gap '
+        + c3[0].raw_gap_mean_pct.toFixed(1) + '%' : '');
+
+    // 4. разрыв в пользу женщин
+    var c4 = cats.filter(function (c) { return c.reverse_gap; });
+    chk('gap in favour of women', c4.length > 0,
+      c4.length ? c4[0].category + ' ' + c4[0].raw_gap_mean_pct.toFixed(1) + '%' : '');
+
+    // 5. связь стажа и оплаты — положительный коэффициент tenure
+    var c5 = cats.filter(function (c) {
+      return c.regression.r_squared !== null && c.regression.coef_tenure > 100;
+    });
+    chk('tenure linked to pay', c5.length >= 2,
+      c5.length + ' categories with coef_tenure > €100/yr, e.g. '
+      + (c5.length ? c5[0].category + ' €' + Math.round(c5[0].regression.coef_tenure) : ''));
+
+    // 6. частичная занятость / неполный год — проверяется по исходным данным
+    chk('part-time and part-year present', result._demo_parttime > 0,
+      result._demo_parttime + ' employees with fte<1 or months_worked<12');
+
+    // 7. ровные оклады, разрыв в переменной части
+    // Требуется именно РОВНЫЙ оклад: разрыв по базе близок к нулю, а весь
+    // разрыв сидит в переменной части. Слабый вариант проверки (только
+    // «variable_gap большой») пропускал категорию, где база разошлась на 11%
+    // из-за случайного перекоса по грейдам, — то есть не проверял заявленное.
+    var c7 = cats.filter(function (c) {
+      return Math.abs(c._base_gap_pct) < 1.0 && c.variable_gap_pct > 25;
+    });
+    chk('flat salaries with a variable-pay gap', c7.length > 0,
+      c7.length ? c7[0].category + ' base gap '
+        + c7[0]._base_gap_pct.toFixed(2) + '% (flat), variable gap '
+        + c7[0].variable_gap_pct.toFixed(1) + '%, total gap '
+        + c7[0].raw_gap_mean_pct.toFixed(1) + '%'
+        : 'no category with |base gap| < 1% and variable gap > 25%');
+
+    return { all: flags.every(Boolean), lines: lines };
+  }
+
+  /* Восстановление стоимости грейда регрессией.
+   * Ожидание: генератор даёт +12% оклада за грейд, значит средний прирост
+   * в евро ≈ 0.12 × средняя оплата категории / (1 + 0.12/2) — грубая оценка.
+   * Проще и честнее: сравнить coef_grade с 12% от средней оплаты категории,
+   * допуск ±40 % — шум и корреляция стажа с грейдом размывают коэффициент. */
+  function gradeRecovery(result) {
+    var ok = 0, tested = 0, parts = [];
+    result.categories.forEach(function (c) {
+      if (c.regression.r_squared === null || c.headcount < 15) return;
+      var meanPay = c.minimum.mean_pay_after; // ≈ средняя нормализованная оплата
+      var expected = meanPay * GRADE_STEP / (1 + GRADE_STEP);
+      var got = c.regression.coef_grade;
+      var ratio = got / expected;
+      tested++;
+      var good = ratio > 0.6 && ratio < 1.4;
+      if (good) ok++;
+      parts.push(c.category + ' €' + Math.round(got) + ' vs €' + Math.round(expected)
+        + ' expected (×' + ratio.toFixed(2) + ')' + (good ? '' : ' [off]'));
+    });
+    return {
+      ok: tested > 0 && ok >= Math.ceil(tested * 0.6),
+      detail: 'Built-in grade step is +' + (GRADE_STEP * 100).toFixed(0)
+        + '% of salary per grade. Recovered in ' + ok + ' of ' + tested
+        + ' testable categories within ±40%: ' + parts.join('; ') + '.'
+    };
+  }
+
+  function fmt(x) {
+    return (Math.round(x * 100) / 100).toLocaleString('en-US',
+      { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  /* ===========================================================================
+   * 10. Публичный интерфейс
+   * ======================================================================== */
+
+  return {
+    generateDemoData: generateDemoData,
+    analyse: analyse,
+    selfCheck: selfCheck,
+    DEFAULT_SETTINGS: DEFAULT_SETTINGS
+  };
+})();
+
+/* Для среды Node (временные прогоны и Excel-модель); в браузере не срабатывает. */
+if (typeof module !== 'undefined' && module.exports) { module.exports = CALC; }
+
+</script>
+<script>
+/* ============================================================================
+   Часть C — импорт CSV и валидация.
+   Публичный интерфейс: CSV.parse(text) → ParseResult (§4 CONTRACT.md).
+
+   Чистый ES2020, глобальный объект, без модулей и внешних зависимостей.
+   Основная функция чистая: строка на входе, объект на выходе.
+   DOM трогает только необязательный хелпер CSV.readFile (FileReader).
+
+   Сообщения пользователю — по-английски: интерфейс англоязычный.
+   ========================================================================== */
+
+var CSV = (function () {
+  'use strict';
+
+  // --- Константы -----------------------------------------------------------
+
+  // Обязательные колонки по §3 спеки и §4 контракта.
+  var REQUIRED = [
+    'category',
+    'gender',
+    'base_salary',
+    'variable_pay',
+    'tenure_years',
+    'grade'
+  ];
+
+  // Необязательные колонки с молчаливыми дефолтами.
+  var DEFAULTS = { fte: 1.0, months_worked: 12 };
+
+  // Доля испорченных строк, выше которой файл считается негодным целиком.
+  var MAX_BAD_ROW_SHARE = 0.20;
+
+  // Словарь синонимов заголовков из типовых HR-выгрузок.
+  // Ключ — уже нормализованный заголовок (нижний регистр, подчёркивания),
+  // значение — каноническое имя колонки.
+  var SYNONYMS = {
+    // base_salary
+    salary: 'base_salary',
+    annual_salary: 'base_salary',
+    base_pay: 'base_salary',
+    basic_salary: 'base_salary',
+    base: 'base_salary',
+    fixed_pay: 'base_salary',
+    gross_salary: 'base_salary',
+    // variable_pay
+    bonus: 'variable_pay',
+    variable: 'variable_pay',
+    variable_compensation: 'variable_pay',
+    variable_salary: 'variable_pay',
+    bonus_pay: 'variable_pay',
+    incentive: 'variable_pay',
+    // gender
+    sex: 'gender',
+    // category
+    job_category: 'category',
+    job_family: 'category',
+    category_of_work: 'category',
+    work_category: 'category',
+    job_group: 'category',
+    // tenure_years
+    tenure: 'tenure_years',
+    years_of_service: 'tenure_years',
+    seniority: 'tenure_years',
+    service_years: 'tenure_years',
+    // grade
+    level: 'grade',
+    job_level: 'grade',
+    band: 'grade',
+    pay_grade: 'grade',
+    // fte
+    full_time_equivalent: 'fte',
+    fte_ratio: 'fte',
+    workload: 'fte',
+    part_time_factor: 'fte',
+    // months_worked
+    months: 'months_worked',
+    months_in_year: 'months_worked',
+    worked_months: 'months_worked',
+    // id
+    employee_id: 'id',
+    emp_id: 'id',
+    employee_number: 'id',
+    staff_id: 'id',
+    personnel_number: 'id'
+  };
+
+  // Распознаваемые значения пола → 'F' | 'M'.
+  var GENDER_MAP = {
+    f: 'F', female: 'F', woman: 'F', women: 'F', w: 'F',
+    'ж': 'F', 'жен': 'F', 'женщина': 'F', 'женский': 'F',
+    m: 'M', male: 'M', man: 'M', men: 'M',
+    'м': 'M', 'муж': 'M', 'мужчина': 'M', 'мужской': 'M'
+  };
+
+  // --- Низкоуровневый парсер CSV -------------------------------------------
+
+  /**
+   * Убирает BOM (Excel ставит его почти всегда) и нормализует переводы строк.
+   * CRLF и одиночный CR приводятся к LF, чтобы дальше работать с одним видом.
+   */
+  function stripBomAndNormalise(text) {
+    var s = String(text == null ? '' : text);
+    if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
+    return s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  }
+
+  /**
+   * Автоопределение разделителя: запятая или точка с запятой.
+   * Считаем вхождения ВНЕ кавычек в первых непустых строках; побеждает частый.
+   * При ничьей выбираем точку с запятой — европейские выгрузки встречаются чаще
+   * в сценариях, где ничья вообще возможна (десятичная запятая внутри чисел).
+   */
+  function detectDelimiter(text) {
+    var counts = { ',': 0, ';': 0 };
+    var inQuotes = false;
+    var lines = 0;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (ch === '"') {
+        // Удвоенная кавычка внутри поля — не смена режима.
+        if (inQuotes && text[i + 1] === '"') { i++; continue; }
+        inQuotes = !inQuotes;
+        continue;
+      }
+      if (!inQuotes) {
+        if (ch === ',' || ch === ';') counts[ch]++;
+        else if (ch === '\n') {
+          lines++;
+          if (lines >= 5) break; // пяти строк достаточно
+        }
+      }
+    }
+    if (counts[';'] > counts[',']) return ';';
+    if (counts[','] > counts[';']) return ',';
+    return ';';
+  }
+
+  /**
+   * Разбор текста в матрицу строк. Поддерживает кавычки, удвоенные кавычки
+   * внутри поля ("" → "), переводы строк внутри кавычек.
+   * Пустые строки пропускаются (в том числе хвостовые).
+   */
+  function splitRows(text, delim) {
+    var rows = [];
+    var row = [];
+    var field = '';
+    var inQuotes = false;
+    var fieldWasQuoted = false;
+
+    function pushField() {
+      row.push(fieldWasQuoted ? field : field.trim());
+      field = '';
+      fieldWasQuoted = false;
+    }
+    function pushRow() {
+      pushField();
+      // Строка считается пустой, если все её поля пусты.
+      var empty = row.every(function (c) { return c === ''; });
+      if (!empty) rows.push(row);
+      row = [];
+    }
+
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else {
+          field += ch;
+        }
+      } else {
+        if (ch === '"') { inQuotes = true; fieldWasQuoted = true; }
+        else if (ch === delim) pushField();
+        else if (ch === '\n') pushRow();
+        else field += ch;
+      }
+    }
+    // Хвост последней строки без завершающего перевода.
+    if (field !== '' || row.length > 0) pushRow();
+    return rows;
+  }
+
+  // --- Нормализация заголовков ---------------------------------------------
+
+  /**
+   * «Base Salary», «base-salary», «BASE_SALARY» → base_salary.
+   * Нижний регистр, обрезка пробелов, пробелы/дефисы/точки → подчёркивание,
+   * схлопывание повторов и обрезка подчёркиваний по краям.
+   */
+  function normaliseHeader(h) {
+    return String(h == null ? '' : h)
+      .replace(/^﻿/, '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s\-.]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+  }
+
+  /** Каноническое имя колонки: нормализация + словарь синонимов. */
+  function canonicalHeader(h) {
+    var n = normaliseHeader(h);
+    return Object.prototype.hasOwnProperty.call(SYNONYMS, n) ? SYNONYMS[n] : n;
+  }
+
+  // --- Разбор значений ------------------------------------------------------
+
+  /**
+   * Числа в европейском и обычном формате.
+   * Принимает «52.000,50», «52 000,50», «52000.50», «€ 52,000.50», «1 234».
+   * Отбрасывает валютные символы и пробелы (в т.ч. неразрывные) как разделители тысяч.
+   * Формат определяется по позиции ПОСЛЕДНЕГО разделителя:
+   *   - если после него 1–2 цифры и до конца строки — он десятичный;
+   *   - иначе оба вида разделителей — тысячные.
+   * Возвращает число или null, если распознать не удалось.
+   */
+  function parseNumber(raw) {
+    if (raw == null) return null;
+    var s = String(raw).trim();
+    if (s === '') return null;
+
+    // Убираем валюту, пробелы (обычные, неразрывные, узкие) и апострофы-разделители.
+    s = s.replace(/[€$£¥\s   ']/g, '');
+    if (s === '') return null;
+
+    // Знак.
+    var negative = false;
+    if (/^\(.*\)$/.test(s)) { negative = true; s = s.slice(1, -1); } // (1 234) — минус в бухгалтерском виде
+    if (s[0] === '+') s = s.slice(1);
+    else if (s[0] === '-') { negative = true; s = s.slice(1); }
+
+    if (!/^[0-9.,]*$/.test(s) || !/[0-9]/.test(s)) return null;
+
+    var lastComma = s.lastIndexOf(',');
+    var lastDot = s.lastIndexOf('.');
+    var lastSep = Math.max(lastComma, lastDot);
+
+    var intPart, fracPart = '';
+    if (lastSep === -1) {
+      intPart = s;
+    } else {
+      var sepChar = s[lastSep];
+      var tail = s.slice(lastSep + 1);
+      // Десятичный разделитель: 1–2 цифры в хвосте и он единственный в своём роде.
+      var sameCharCount = s.split(sepChar).length - 1;
+      var isDecimal = /^[0-9]{1,2}$/.test(tail) && sameCharCount === 1;
+      // «1.234» неоднозначно: точка с тремя цифрами — тысячи, поэтому 1–2 цифры.
+      if (isDecimal) {
+        intPart = s.slice(0, lastSep);
+        fracPart = tail;
+      } else {
+        intPart = s;
+      }
+    }
+    intPart = intPart.replace(/[.,]/g, '');
+    if (intPart === '') intPart = '0';
+    if (!/^[0-9]+$/.test(intPart) || (fracPart !== '' && !/^[0-9]+$/.test(fracPart))) return null;
+
+    var value = Number(intPart + (fracPart ? '.' + fracPart : ''));
+    if (!isFinite(value)) return null;
+    return negative ? -value : value;
+  }
+
+  /** Пол: F/M/female/male/woman/man/ж/м в любом регистре → 'F' | 'M' | null. */
+  function parseGender(raw) {
+    if (raw == null) return null;
+    var s = String(raw).trim().toLowerCase().replace(/[.\s]+$/, '');
+    if (s === '') return null;
+    return Object.prototype.hasOwnProperty.call(GENDER_MAP, s) ? GENDER_MAP[s] : null;
+  }
+
+  /** Порядковый id вида E001, E002, … когда колонки id в файле нет. */
+  function makeId(n) {
+    var s = String(n);
+    while (s.length < 3) s = '0' + s;
+    return 'E' + s;
+  }
+
+  /** Склонение по-английски: 1 row / 2 rows. */
+  function rowWord(n) { return n === 1 ? 'row' : 'rows'; }
+
+  // --- Публичный parse ------------------------------------------------------
+
+  /**
+   * CSV.parse(text) → { ok, employees, errors, warnings }
+   * Одна кривая строка не роняет файл: она попадает в warnings и пропускается.
+   * Если испорчено больше 20% строк — это ошибка файла целиком.
+   */
+  function parse(text) {
+    var errors = [];
+    var warnings = [];
+    var fail = function () {
+      return { ok: false, employees: [], errors: errors, warnings: warnings };
+    };
+
+    var normalised = stripBomAndNormalise(text);
+    if (normalised.trim() === '') {
+      errors.push('The file is empty. Export a CSV with a header row and one row per employee.');
+      return fail();
+    }
+
+    var delim = detectDelimiter(normalised);
+    var rows = splitRows(normalised, delim);
+
+    if (rows.length === 0) {
+      errors.push('The file has no readable rows. Export a CSV with a header row and one row per employee.');
+      return fail();
+    }
+
+    // --- Заголовки ---
+    var rawHeaders = rows[0];
+    var headers = rawHeaders.map(canonicalHeader);
+    var present = {};
+    headers.forEach(function (h, i) {
+      if (h !== '' && !Object.prototype.hasOwnProperty.call(present, h)) present[h] = i;
+    });
+
+    var foundList = headers.filter(function (h) { return h !== ''; }).join(', ');
+    var missing = REQUIRED.filter(function (c) {
+      return !Object.prototype.hasOwnProperty.call(present, c);
+    });
+
+    if (missing.length > 0) {
+      // Сообщение должно называть недостающее и показывать найденное,
+      // чтобы пользователь сразу понял, что чинить в выгрузке.
+      var what = missing.length === 1
+        ? 'Required column "' + missing[0] + '" is missing.'
+        : 'Required columns are missing: ' + missing.map(function (m) { return '"' + m + '"'; }).join(', ') + '.';
+      errors.push(
+        what +
+        ' The file has these columns: ' + (foundList || '(none)') + '.' +
+        ' Rename the matching column in your export, or add it.' +
+        ' Required columns are: ' + REQUIRED.join(', ') + '.' +
+        ' Optional: fte (defaults to 1.0), months_worked (defaults to 12), id (generated if absent).'
+      );
+      return fail();
+    }
+
+    if (rows.length < 2) {
+      errors.push('The file has a header row but no data rows. Add one row per employee below the header.');
+      return fail();
+    }
+
+    // --- Строки ---
+    var employees = [];
+    var badRows = [];              // сообщения о пропущенных строках
+    var dataRowCount = rows.length - 1;
+    var defaultsUsed = { fte: 0, months_worked: 0 };
+    var idSeen = {};
+    var autoIdCounter = 0;
+    var hasIdColumn = Object.prototype.hasOwnProperty.call(present, 'id');
+    var genderSeen = { F: 0, M: 0 };
+    var duplicateIdCount = 0;
+
+    // Значение ячейки по каноническому имени колонки.
+    function cell(row, name) {
+      var idx = present[name];
+      if (idx === undefined) return '';
+      var v = row[idx];
+      return v === undefined || v === null ? '' : String(v).trim();
+    }
+
+    for (var r = 1; r < rows.length; r++) {
+      var row = rows[r];
+      var lineNo = r + 1; // номер строки в файле, как его видит пользователь
+      var problem = null;
+
+      // Пол.
+      var genderRaw = cell(row, 'gender');
+      var gender = parseGender(genderRaw);
+      if (gender === null) {
+        problem = genderRaw === ''
+          ? 'gender is empty'
+          : 'gender value "' + genderRaw + '" is not recognised (use F/M, female/male)';
+      }
+
+      // Категория.
+      var category = cell(row, 'category');
+      if (problem === null && category === '') problem = 'category is empty';
+
+      // Числовые поля.
+      var base_salary = null, variable_pay = null, tenure_years = null, grade = null;
+      var fte = DEFAULTS.fte, months_worked = DEFAULTS.months_worked;
+
+      if (problem === null) {
+        var baseRaw = cell(row, 'base_salary');
+        base_salary = parseNumber(baseRaw);
+        if (base_salary === null) {
+          problem = baseRaw === ''
+            ? 'base_salary is empty'
+            : 'base_salary value "' + baseRaw + '" is not a number';
+        } else if (base_salary < 0) {
+          problem = 'base_salary is negative (' + baseRaw + ')';
+        }
+      }
+
+      if (problem === null) {
+        // Пустая ячейка variable_pay = 0. Это нормально и не предупреждение.
+        var varRaw = cell(row, 'variable_pay');
+        if (varRaw === '') variable_pay = 0;
+        else {
+          variable_pay = parseNumber(varRaw);
+          if (variable_pay === null) problem = 'variable_pay value "' + varRaw + '" is not a number';
+          else if (variable_pay < 0) problem = 'variable_pay is negative (' + varRaw + ')';
+        }
+      }
+
+      if (problem === null) {
+        var tenRaw = cell(row, 'tenure_years');
+        tenure_years = parseNumber(tenRaw);
+        if (tenure_years === null) {
+          problem = tenRaw === ''
+            ? 'tenure_years is empty'
+            : 'tenure_years value "' + tenRaw + '" is not a number';
+        } else if (tenure_years < 0) {
+          problem = 'tenure_years is negative (' + tenRaw + ')';
+        }
+      }
+
+      if (problem === null) {
+        var gradeRaw = cell(row, 'grade');
+        grade = parseNumber(gradeRaw);
+        if (grade === null) {
+          problem = gradeRaw === ''
+            ? 'grade is empty'
+            : 'grade value "' + gradeRaw + '" is not a number';
+        } else {
+          grade = Math.round(grade); // грейд — порядковый целый уровень
+        }
+      }
+
+      // fte: пусто → дефолт 1.0 (молча, но со сводкой в warnings).
+      if (problem === null) {
+        var fteRaw = cell(row, 'fte');
+        if (fteRaw === '') { fte = DEFAULTS.fte; defaultsUsed.fte++; }
+        else {
+          fte = parseNumber(fteRaw);
+          if (fte === null) problem = 'fte value "' + fteRaw + '" is not a number';
+          else if (!(fte > 0 && fte <= 1)) problem = 'fte is outside the allowed range 0 < fte <= 1 (' + fteRaw + ')';
+        }
+      }
+
+      // months_worked: пусто → дефолт 12.
+      if (problem === null) {
+        var mwRaw = cell(row, 'months_worked');
+        if (mwRaw === '') { months_worked = DEFAULTS.months_worked; defaultsUsed.months_worked++; }
+        else {
+          months_worked = parseNumber(mwRaw);
+          if (months_worked === null) problem = 'months_worked value "' + mwRaw + '" is not a number';
+          else if (!(months_worked > 0 && months_worked <= 12)) {
+            problem = 'months_worked is outside the allowed range 0 < months_worked <= 12 (' + mwRaw + ')';
+          }
+        }
+      }
+
+      if (problem !== null) {
+        badRows.push('Row ' + lineNo + ' skipped: ' + problem + '.');
+        continue;
+      }
+
+      // id: из колонки либо сгенерированный.
+      var id = hasIdColumn ? cell(row, 'id') : '';
+      if (id === '') {
+        do { autoIdCounter++; id = makeId(autoIdCounter); } while (idSeen[id]);
+      }
+      if (idSeen[id]) {
+        // Дубликат id не повод терять строку: делаем уникальным и считаем в сводке.
+        duplicateIdCount++;
+        var suffix = 2;
+        while (idSeen[id + '-' + suffix]) suffix++;
+        id = id + '-' + suffix;
+      }
+      idSeen[id] = true;
+
+      genderSeen[gender]++;
+
+      employees.push({
+        id: id,
+        category: category,
+        gender: gender,
+        base_salary: base_salary,
+        variable_pay: variable_pay,
+        tenure_years: tenure_years,
+        grade: grade,
+        fte: fte,
+        months_worked: months_worked
+      });
+    }
+
+    // --- Сводки в warnings ---
+    if (defaultsUsed.fte > 0) {
+      warnings.push(defaultsUsed.fte + ' ' + rowWord(defaultsUsed.fte) + ' had no fte, assumed 1.0.');
+    }
+    if (defaultsUsed.months_worked > 0) {
+      warnings.push(defaultsUsed.months_worked + ' ' + rowWord(defaultsUsed.months_worked) +
+        ' had no months_worked, assumed 12.');
+    }
+    if (duplicateIdCount > 0) {
+      warnings.push(duplicateIdCount + ' ' + rowWord(duplicateIdCount) +
+        ' had a duplicate id; a suffix was added to keep every id unique.');
+    }
+
+    // --- Устойчивость: доля испорченных строк ---
+    var badShare = dataRowCount > 0 ? badRows.length / dataRowCount : 0;
+    if (badRows.length > 0 && badShare > MAX_BAD_ROW_SHARE) {
+      var pct = Math.round(badShare * 100);
+      errors.push(
+        pct + '% of the data rows could not be read (' + badRows.length + ' of ' + dataRowCount +
+        '), which is too many to trust the result. This usually means the wrong column separator, ' +
+        'a shifted header row, or a different export than expected. The first problems are listed below.'
+      );
+      errors = errors.concat(badRows.slice(0, 10));
+      if (badRows.length > 10) errors.push('… and ' + (badRows.length - 10) + ' more ' + rowWord(badRows.length - 10) + '.');
+      return fail();
+    }
+
+    // Проблемные строки, которых немного, — предупреждения с номерами строк.
+    if (badRows.length > 0) {
+      warnings.push(badRows.length + ' ' + rowWord(badRows.length) +
+        (badRows.length === 1 ? ' was' : ' were') + ' skipped because of unreadable values.');
+      warnings = warnings.concat(badRows.slice(0, 20));
+      if (badRows.length > 20) warnings.push('… and ' + (badRows.length - 20) + ' more skipped ' + rowWord(badRows.length - 20) + '.');
+    }
+
+    if (employees.length === 0) {
+      errors.push('No usable employee rows were found in the file. Check that the data rows sit directly under the header row.');
+      return fail();
+    }
+
+    // Расчёт разрыва невозможен без обоих полов.
+    if (genderSeen.F === 0 || genderSeen.M === 0) {
+      var have = genderSeen.F > 0 ? 'F' : 'M';
+      errors.push(
+        'Only one gender was recognised in the file (' + have + '). A pay gap needs both women and men, ' +
+        'so nothing can be compared. Check the gender column: accepted values are F/M, female/male, woman/man.'
+      );
+      return fail();
+    }
+
+    return { ok: true, employees: employees, errors: [], warnings: warnings };
+  }
+
+  // --- Необязательный хелпер для браузера ----------------------------------
+
+  /**
+   * Читает File из <input type="file"> и отдаёт ParseResult в колбэк.
+   * Единственное место, где часть C касается браузерного API. Сеть не трогается:
+   * FileReader читает локальный файл.
+   */
+  function readFile(file, callback) {
+    if (typeof FileReader === 'undefined') {
+      callback({ ok: false, employees: [], errors: ['File reading is not supported in this browser.'], warnings: [] });
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () { callback(parse(reader.result)); };
+    reader.onerror = function () {
+      callback({ ok: false, employees: [], errors: ['The file could not be read. Try saving it again as CSV and re-uploading.'], warnings: [] });
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  return {
+    parse: parse,
+    readFile: readFile,
+    REQUIRED_COLUMNS: REQUIRED.slice(),
+    DEFAULTS: { fte: DEFAULTS.fte, months_worked: DEFAULTS.months_worked },
+    // Открыто для тестов и листа Method; UI сюда не обязан лезть.
+    _internals: {
+      normaliseHeader: normaliseHeader,
+      canonicalHeader: canonicalHeader,
+      parseNumber: parseNumber,
+      parseGender: parseGender,
+      detectDelimiter: detectDelimiter,
+      SYNONYMS: SYNONYMS
+    }
+  };
+})();
+
+// Экспорт для Node — только чтобы прогонять тесты вне браузера.
+// В собранной странице этой ветки не существует: typeof module === 'undefined'.
+if (typeof module !== 'undefined' && module.exports) module.exports = CSV;
+
+</script>
+<script>
+/* ============================================================================
+ * Part B — UI
+ * Owns all DOM. Computes nothing: calls CALC.* and renders the Result.
+ * No network calls of any kind. No external fonts, no CDN, no chart library.
+ * ==========================================================================*/
+
+/* ---------------------------------------------------------------------------
+ * FIXTURE_RESULT — part B's own stand-in for the Result shape from CONTRACT.md.
+ * Used only while part A is missing; dropped at final assembly.
+ * Numbers are hand-made and internally plausible, not computed.
+ * -------------------------------------------------------------------------*/
+var FIXTURE_RESULT = (function () {
+  function scen(recipients, adjustment, contributions, unexplainedAfter, meanAfter) {
+    return {
+      recipients: recipients,
+      adjustment: adjustment,
+      contributions: contributions,
+      total_cost: adjustment + contributions,
+      unexplained_after: unexplainedAfter,
+      mean_pay_after: meanAfter
+    };
+  }
+
+  var categories = [
+    {
+      category: 'Engineering',
+      headcount: 42, headcount_f: 14, headcount_m: 28,
+      raw_gap_mean_pct: 8.4, raw_gap_median_pct: 7.9, variable_gap_pct: 12.1,
+      explained_pct: 3.1, unexplained_pct: 5.3,
+      regression: { intercept: 38000, coef_grade: 4800, coef_tenure: 720, r_squared: 0.71, n: 42 },
+      unreliable: false, reverse_gap: false,
+      minimum: scen(9, 24180.44, 7480.11, 5.0, 61240.00),
+      full: scen(14, 61220.10, 18900.55, 0.0, 62980.30)
+    },
+    {
+      category: 'Sales',
+      headcount: 36, headcount_f: 17, headcount_m: 19,
+      raw_gap_mean_pct: 11.2, raw_gap_median_pct: 10.4, variable_gap_pct: 24.7,
+      explained_pct: 2.4, unexplained_pct: 8.8,
+      regression: { intercept: 31000, coef_grade: 4100, coef_tenure: 610, r_squared: 0.58, n: 36 },
+      unreliable: false, reverse_gap: false,
+      minimum: scen(12, 41880.90, 13070.25, 5.0, 54110.70),
+      full: scen(17, 78450.30, 24380.60, 0.0, 56220.15)
+    },
+    {
+      category: 'Operations',
+      headcount: 48, headcount_f: 26, headcount_m: 22,
+      raw_gap_mean_pct: 4.1, raw_gap_median_pct: 3.6, variable_gap_pct: 5.2,
+      explained_pct: 2.9, unexplained_pct: 1.2,
+      regression: { intercept: 27500, coef_grade: 3300, coef_tenure: 480, r_squared: 0.64, n: 48 },
+      unreliable: false, reverse_gap: false,
+      minimum: scen(0, 0, 0, 1.2, 41320.00),
+      full: scen(19, 22140.75, 6970.35, 0.0, 41800.40)
+    },
+    {
+      category: 'Customer Support',
+      headcount: 31, headcount_f: 21, headcount_m: 10,
+      raw_gap_mean_pct: 2.2, raw_gap_median_pct: 1.9, variable_gap_pct: 9.8,
+      explained_pct: 1.7, unexplained_pct: 0.5,
+      regression: { intercept: 24000, coef_grade: 2600, coef_tenure: 390, r_squared: 0.52, n: 31 },
+      unreliable: false, reverse_gap: false,
+      minimum: scen(0, 0, 0, 0.5, 33050.00),
+      full: scen(11, 8320.60, 2620.99, 0.0, 33210.20)
+    },
+    {
+      category: 'Finance',
+      headcount: 22, headcount_f: 12, headcount_m: 10,
+      raw_gap_mean_pct: -3.6, raw_gap_median_pct: -4.2, variable_gap_pct: -2.1,
+      explained_pct: -1.1, unexplained_pct: -2.5,
+      regression: { intercept: 35000, coef_grade: 4400, coef_tenure: 700, r_squared: 0.69, n: 22 },
+      unreliable: false, reverse_gap: true,
+      minimum: scen(0, 0, 0, -2.5, 58400.00),
+      full: scen(0, 0, 0, -2.5, 58400.00)
+    },
+    {
+      category: 'Legal',
+      headcount: 8, headcount_f: 2, headcount_m: 6,
+      raw_gap_mean_pct: 19.7, raw_gap_median_pct: 17.4, variable_gap_pct: 21.3,
+      explained_pct: 4.9, unexplained_pct: 14.8,
+      regression: { intercept: 41000, coef_grade: 5200, coef_tenure: 830, r_squared: 0.44, n: 8 },
+      unreliable: true, reverse_gap: false,
+      minimum: scen(2, 19420.00, 5010.30, 5.0, 71880.00),
+      full: scen(2, 29060.40, 6440.85, 0.0, 73140.90)
+    },
+    {
+      category: 'Marketing',
+      headcount: 13, headcount_f: 7, headcount_m: 6,
+      raw_gap_mean_pct: 6.9, raw_gap_median_pct: 6.1, variable_gap_pct: 18.4,
+      explained_pct: 0.4, unexplained_pct: 6.5,
+      regression: { intercept: 30500, coef_grade: 3900, coef_tenure: 520, r_squared: 0.61, n: 13 },
+      unreliable: false, reverse_gap: false,
+      minimum: scen(4, 6890.25, 2160.40, 5.0, 45120.00),
+      full: scen(7, 20410.80, 6390.70, 0.0, 46030.55)
+    }
+  ];
+
+  function sumScen(key, month) {
+    var adj = 0, con = 0;
+    categories.forEach(function (c) { adj += c[key].adjustment; con += c[key].contributions; });
+    var total = adj + con;
+    return {
+      adjustment: adj,
+      contributions: con,
+      total_cost: total,
+      cost_current_year: total * (13 - month) / 12,
+      cost_next_year: total,
+      payroll_uplift_pct: total / 11800000 * 100
+    };
+  }
+
+  var month = 7;
+  var minimum = sumScen('minimum', month);
+  var full = sumScen('full', month);
+  var difference = {
+    adjustment: full.adjustment - minimum.adjustment,
+    contributions: full.contributions - minimum.contributions,
+    total_cost: full.total_cost - minimum.total_cost,
+    cost_current_year: full.cost_current_year - minimum.cost_current_year,
+    cost_next_year: full.cost_next_year - minimum.cost_next_year,
+    payroll_uplift_pct: full.payroll_uplift_pct - minimum.payroll_uplift_pct
+  };
+
+  return {
+    categories: categories,
+    totals: {
+      headcount: 200,
+      payroll_before: 11800000,
+      minimum: minimum,
+      full: full,
+      difference: difference
+    },
+    settings_used: {
+      threshold_pct: 5,
+      implementation_month: 7,
+      rate_below: 31.5,
+      rate_above: 1.15,
+      ceiling: 61214
+    }
+  };
+})();
+
+var UI = (function () {
+  'use strict';
+
+  /* ---------------------------------------------------------------- state */
+
+  var state = {
+    employees: null,      // Employee[] or null while CALC is absent
+    result: null,         // last rendered Result
+    scenario: 'minimum',  // 'minimum' | 'full' — table + chart only
+    usingFixture: true,
+    dataLabel: 'demo data'
+  };
+
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+
+  /* ------------------------------------------------------------ formatting */
+
+  function $(id) { return document.getElementById(id); }
+
+  function money(n) {
+    if (n === null || n === undefined || !isFinite(n)) return '—';
+    var v = Math.round(n);
+    return '€' + v.toLocaleString('en-GB');
+  }
+
+  function money0(n) { return money(n); }
+
+  function pct(n, digits) {
+    if (n === null || n === undefined || !isFinite(n)) return '—';
+    var d = (digits === undefined) ? 1 : digits;
+    return n.toFixed(d) + '%';
+  }
+
+  function signedPct(n, digits) {
+    if (n === null || n === undefined || !isFinite(n)) return '—';
+    var d = (digits === undefined) ? 1 : digits;
+    return (n > 0 ? '' : '') + n.toFixed(d) + '%';
+  }
+
+  function num(n) {
+    if (n === null || n === undefined || !isFinite(n)) return '—';
+    return String(n);
+  }
+
+  function text(el, s) { el.textContent = s; }
+
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
+  function el(tag, cls, txt) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt !== undefined && txt !== null) e.textContent = txt;
+    return e;
+  }
+
+  function svgEl(tag, attrs) {
+    var e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    if (attrs) {
+      for (var k in attrs) {
+        if (Object.prototype.hasOwnProperty.call(attrs, k)) {
+          e.setAttribute(k, String(attrs[k]));
+        }
+      }
+    }
+    return e;
+  }
+
+  /* -------------------------------------------------------------- settings */
+
+  function numberFromInput(id, fallback) {
+    var raw = $(id).value.replace(',', '.').trim();
+    var v = parseFloat(raw);
+    return isFinite(v) ? v : fallback;
+  }
+
+  function readSettings() {
+    var s = {
+      threshold_pct: numberFromInput('ctl-threshold', 5),
+      implementation_month: Math.round(numberFromInput('ctl-month', 7)),
+      rate_below: numberFromInput('ctl-rate-below', 31.5),
+      rate_above: numberFromInput('ctl-rate-above', 1.15),
+      ceiling: numberFromInput('ctl-ceiling', 61214)
+    };
+    if (s.implementation_month < 1) s.implementation_month = 1;
+    if (s.implementation_month > 12) s.implementation_month = 12;
+    if (s.threshold_pct < 0) s.threshold_pct = 0;
+    if (s.ceiling < 0) s.ceiling = 0;
+    return s;
+  }
+
+  /* ------------------------------------------------------------ headline */
+
+  function renderHeadline(result) {
+    var t = result.totals;
+    text($('head-min'), money(t.minimum.total_cost));
+    text($('head-full'), money(t.full.total_cost));
+    text($('head-diff'), money(t.difference.total_cost));
+  }
+
+  /* ------------------------------------------------------------- summary */
+
+  function renderSummary(result) {
+    var t = result.totals;
+    var s = result.settings_used;
+    var rows = [
+      ['Headcount', num(t.headcount)],
+      ['Payroll before, total pay', money(t.payroll_before)],
+      ['Minimum compliance — base pay adjustment', money(t.minimum.adjustment)],
+      ['Minimum compliance — employer contributions', money(t.minimum.contributions)],
+      ['Minimum compliance — cost this year (from ' + MONTHS[(s.implementation_month || 1) - 1] + ')',
+        money(t.minimum.cost_current_year)],
+      ['Minimum compliance — cost next year, full', money(t.minimum.cost_next_year)],
+      ['Minimum compliance — payroll uplift', pct(t.minimum.payroll_uplift_pct, 2)],
+      ['Full equalisation — base pay adjustment', money(t.full.adjustment)],
+      ['Full equalisation — employer contributions', money(t.full.contributions)],
+      ['Full equalisation — cost this year (from ' + MONTHS[(s.implementation_month || 1) - 1] + ')',
+        money(t.full.cost_current_year)],
+      ['Full equalisation — cost next year, full', money(t.full.cost_next_year)],
+      ['Full equalisation — payroll uplift', pct(t.full.payroll_uplift_pct, 2)]
+    ];
+    var tbody = $('summary-body');
+    clear(tbody);
+    rows.forEach(function (r) {
+      var tr = el('tr');
+      tr.appendChild(el('th', 'k', r[0]));
+      tr.appendChild(el('td', 'v num', r[1]));
+      tbody.appendChild(tr);
+    });
+
+    renderScenarioTiles(result);
+  }
+
+  /* Stat tiles for the two scenarios plus the difference between them.
+   * The same figures as the table above, in the form the reader actually
+   * compares them in: one tile per scenario, the total as the headline, the
+   * share of payroll as a meter, the breakdown underneath. */
+  function renderScenarioTiles(result) {
+    var host = $('scen-grid');
+    if (!host) return;
+    var t = result.totals;
+    var s = result.settings_used;
+    var month = MONTHS[(s.implementation_month || 1) - 1];
+    clear(host);
+
+    /* Meters share one scale so the two fills are comparable: the wider of the
+       two scenarios defines full width. Without a common denominator the
+       minimum tile would look as expensive as the full one. */
+    var maxPct = Math.max(t.minimum.payroll_uplift_pct, t.full.payroll_uplift_pct, 0.0001);
+
+    function tile(name, block, opts) {
+      var o = opts || {};
+      var box = el('div', 'scen' + (o.diff ? ' scen-diff' : ''));
+
+      var head = el('div', 'scen-head');
+      head.appendChild(el('div', 'scen-name', name));
+      box.appendChild(head);
+
+      box.appendChild(el('div', 'scen-total num', money(block.total_cost)));
+
+      if (!o.diff) {
+        var meter = el('div', 'meter');
+        var fill = el('i');
+        fill.style.width = Math.max(2, block.payroll_uplift_pct / maxPct * 100) + '%';
+        meter.appendChild(fill);
+        box.appendChild(meter);
+      }
+      box.appendChild(el('div', 'meter-note',
+        pct(block.payroll_uplift_pct, 2) + ' of payroll'));
+
+      var rows = el('div', 'scen-rows');
+      [
+        ['Base pay adjustment', money(block.adjustment)],
+        ['Employer contributions', money(block.contributions)],
+        ['Cost this year (from ' + month + ')', money(block.cost_current_year)],
+        ['Cost next year, full', money(block.cost_next_year)]
+      ].forEach(function (r) {
+        var line = el('div', 'scen-row');
+        line.appendChild(el('span', 'k', r[0]));
+        line.appendChild(el('span', 'v', r[1]));
+        rows.appendChild(line);
+      });
+      box.appendChild(rows);
+      return box;
+    }
+
+    host.appendChild(tile('Minimum compliance', t.minimum));
+    host.appendChild(tile('Full equalisation', t.full));
+    host.appendChild(tile('Difference', t.difference, { diff: true }));
+  }
+
+  /* --------------------------------------------------------------- chart
+   * Own inline SVG. No library.
+   *
+   * Geometry: fixed user-space viewBox 0 0 W H, scaled by CSS to the
+   * container width (preserveAspectRatio default). Everything inside is in
+   * user units, so the phone rendering is the desktop rendering shrunk —
+   * font sizes are chosen so that at ~340 CSS px wide the labels still read.
+   *
+   * X: one slot per category, evenly spaced.
+   * Y: unexplained gap %, linear, domain covers [min(0, worst reverse),
+   *    max(threshold, worst gap)] with padding; y=0 baseline always drawn,
+   *    threshold drawn as a dashed horizontal rule with a label.
+   * Marks: "before" hollow circle, "after" filled circle, joined by a
+   *    vertical connector. Reverse-gap categories use a distinct shape
+   *    (diamond) and sit below the zero line. Unreliable categories get a
+   *    hatched marker ring and an asterisk on the axis label.
+   * -------------------------------------------------------------------*/
+
+  /* The viewBox width tracks the container's actual width, so user-space px and
+     CSS px stay near 1:1 and a 13px label renders at ~13px on every screen.
+     A fixed box magnifies or shrinks every glyph with the container: at 780
+     against a 318px phone column, every label came out at 5-6px.
+
+     Wmin keeps a floor under the box — below it the chart scales down rather
+     than losing all margin. Narrow screens also get tighter side margins and a
+     shorter plot: the axis needs less room when there are fewer pixels to
+     spend, and the labels rotate instead of wrapping. */
+  var CHART = {
+    W: 780, Wmin: 360, narrowBelow: 560,
+    plotH: 300, plotHNarrow: 210,
+    ml: 60, mr: 22, mlNarrow: 40, mrNarrow: 12,
+    mt: 44, mtNarrow: 34, mb: 96
+  };
+
+  /* Split a category name into at most two display lines. Initials ("CS" for
+     Customer Support) are unreadable in a legend-less axis, so we wrap on a
+     space instead and only truncate a single over-long word. */
+  function labelLines(s, maxLen) {
+    var m = maxLen || 13;
+    if (s.length <= m) return [s];
+    var parts = s.split(/\s+/);
+    if (parts.length === 1) return [s.slice(0, m) + '…'];
+    var first = parts[0], rest = parts.slice(1).join(' ');
+    if (first.length > m) first = first.slice(0, m) + '…';
+    if (rest.length > m) rest = rest.slice(0, m) + '…';
+    return [first, rest];
+  }
+
+  /* Which points get a printed value. Never all of them: seven numbers over
+     seven slots is noise. The rule is "the ones the reader would ask about" —
+     the worst residual, and every reverse gap, because a point below zero is
+     the one thing on this chart that is not a defect to be fixed. */
+  function labelled(cats) {
+    var pick = {};
+    var worst = -Infinity, wi = -1;
+    cats.forEach(function (c, i) {
+      if (c.reverse_gap) { pick[i] = true; return; }
+      if (c.unexplained_pct > worst) { worst = c.unexplained_pct; wi = i; }
+    });
+    if (wi >= 0) pick[wi] = true;
+    return pick;
+  }
+
+  function renderChart(result, scenario) {
+    var host = $('chart');
+    clear(host);
+
+    var cats = result.categories;
+    var threshold = result.settings_used.threshold_pct;
+    if (!cats.length) { host.appendChild(el('p', 'muted', 'No categories.')); return; }
+
+    /* The viewBox width follows the container, so that user-space px and CSS px
+       stay roughly 1:1 at any screen width. With a fixed 780 box the SVG was
+       squeezed to ~318 CSS px on a phone (scale 0.41) and every label rendered
+       at 5-6px — unreadable, and invisible to jsdom, which reports the declared
+       size rather than the scaled one. Clamped: below ~360 the box stops
+       shrinking, so a very narrow phone scales down slightly rather than
+       cramming seven categories into no space at all. */
+    var hostW = host.getBoundingClientRect().width || CHART.W;
+    var W = Math.round(Math.max(CHART.Wmin, Math.min(CHART.W, hostW)));
+    var narrow = W < CHART.narrowBelow;
+
+    var ml = narrow ? CHART.mlNarrow : CHART.ml;
+    var mr = narrow ? CHART.mrNarrow : CHART.mr;
+    var mt = narrow ? CHART.mtNarrow : CHART.mt;
+    var plotW = W - ml - mr;
+
+    /* Decide the x-label treatment before fixing the height: a rotated label
+       needs a deeper bottom margin than a wrapped one. ~7px per character at
+       the 14px user-space label size. */
+    var slotW = plotW / cats.length;
+    var maxChars = Math.max(6, Math.floor(slotW / 7));
+    var longestWord = 0;
+    cats.forEach(function (c) {
+      c.category.split(/\s+/).forEach(function (w) {
+        if (w.length > longestWord) longestWord = w.length;
+      });
+    });
+    var rotate = longestWord > maxChars;
+    var rotReach = 0;   // vertical depth the rotated labels need, set below
+    /* A -40deg label runs down-left from its anchor, so in rotate mode the
+       plot needs extra room on the left or the first label is clipped. */
+    if (rotate) {
+      /* A -40deg label runs down-LEFT from its anchor, so the first category
+         needs room to the left of the plot or it is cut off by the viewBox.
+         The reserve is the label's own horizontal reach: the longest name at
+         ~6.2px per character, projected onto x by cos(40deg) ~= 0.77, capped
+         so it cannot swallow the plot on a narrow screen. */
+      var longestName = 0;
+      cats.forEach(function (c) {
+        var n = c.category.length + 8;          // + the " (n=NN)" suffix
+        if (n > longestName) longestName = n;
+      });
+      /* 6.9px per character, not 6.2: the earlier estimate was measured on
+         lowercase and left "Customer Support (n=30)" two pixels short. */
+      var reach = Math.ceil(longestName * 6.9 * 0.77);
+      ml = Math.max(ml, Math.min(reach, Math.round(W * 0.30)));
+      plotW = W - ml - mr;
+      /* The same label also descends: sin(40deg) ~= 0.64 of its length, plus
+         the anchor offset below the axis. The bottom margin has to cover that
+         or the longest names are clipped by the viewBox — which is exactly
+         what happened to "Customer Support (n=30)". */
+      rotReach = Math.ceil(longestName * 6.9 * 0.64) + 26;
+    }
+    /* slotW was measured against the pre-rotate plot width; the hover bands
+       below are sized from it, so it has to follow the narrowed plot or
+       adjacent bands overlap. */
+    slotW = plotW / cats.length;
+    var plotH = narrow ? CHART.plotHNarrow : CHART.plotH;
+    /* Rotated labels run down-left from the axis and need more depth than
+       wrapped ones; on a narrow box they are the normal case. */
+    var mb = rotate ? Math.max(narrow ? 104 : 96, rotReach)
+                    : (narrow ? 76 : CHART.mb);
+    var H = plotH + mt + mb;
+
+    var vals = [];
+    cats.forEach(function (c) {
+      vals.push(c.unexplained_pct);
+      vals.push(c[scenario].unexplained_after);
+    });
+    vals.push(0);
+    vals.push(threshold);
+    var vmax = Math.max.apply(null, vals);
+    var vmin = Math.min.apply(null, vals);
+    var pad = Math.max(1, (vmax - vmin) * 0.12);
+    var yTop = vmax + pad, yBot = vmin - pad;
+    if (yTop === yBot) { yTop += 1; yBot -= 1; }
+
+    function y(v) { return mt + plotH * (yTop - v) / (yTop - yBot); }
+    function x(i) { return ml + plotW * (i + 0.5) / cats.length; }
+
+    var svg = svgEl('svg', {
+      viewBox: '0 0 ' + W + ' ' + H,
+      role: 'img',
+      'aria-label': 'Unexplained pay gap by category, before and after adjustment, ' +
+        'with the joint pay assessment threshold at ' + threshold + ' per cent'
+    });
+    svg.setAttribute('class', 'chart-svg');
+
+    /* gridlines + y axis ticks */
+    var step = niceStep(yTop - yBot);
+    var gridG = svgEl('g', { 'class': 'grid' });
+    for (var g = Math.ceil(yBot / step) * step; g <= yTop + 1e-9; g += step) {
+      var gy = y(g);
+      gridG.appendChild(svgEl('line', { x1: ml, x2: W - mr, y1: gy, y2: gy, 'class': 'gridline' }));
+      var lab = svgEl('text', { x: ml - 8, y: gy + 4, 'class': 'axis-lab', 'text-anchor': 'end' });
+      lab.textContent = (Math.abs(g) < 1e-9 ? '0' : g.toFixed(step < 1 ? 1 : 0)) + '%';
+      gridG.appendChild(lab);
+    }
+    svg.appendChild(gridG);
+
+    /* zero baseline */
+    svg.appendChild(svgEl('line', {
+      x1: ml, x2: W - mr, y1: y(0), y2: y(0), 'class': 'zeroline'
+    }));
+
+    /* threshold line — required by spec */
+    var ty = y(threshold);
+    svg.appendChild(svgEl('line', {
+      x1: ml, x2: W - mr, y1: ty, y2: ty, 'class': 'threshline'
+    }));
+    /* Label sits on its own line in the top margin, never over the plot: with
+       seven categories a right-aligned in-plot label collides with the last
+       point whenever that category's gap is near the threshold. */
+    var tlabTxt = 'threshold ' + threshold + '%, joint pay assessment';
+    var tlab = svgEl('text', { x: W - mr, y: 30, 'class': 'thresh-lab', 'text-anchor': 'end' });
+    tlab.textContent = tlabTxt;
+    svg.appendChild(tlab);
+    /* The dash sample sits to the LEFT of the text, past its measured width.
+       Anchoring it by a guessed offset put the dash through the word. */
+    var tw = tlabTxt.length * 6.6 + 10;
+    svg.appendChild(svgEl('line', {
+      x1: W - mr - tw - 20, x2: W - mr - tw - 4, y1: 26, y2: 26, 'class': 'threshline'
+    }));
+
+    /* series */
+    var marked = labelled(cats);
+    var maxLines = 1;
+    if (!rotate) {
+      cats.forEach(function (c) {
+        var n = labelLines(c.category, maxChars).length;
+        if (n > maxLines) maxLines = n;
+      });
+    }
+    cats.forEach(function (c, i) {
+      var cx = x(i);
+      var before = c.unexplained_pct;
+      var after = c[scenario].unexplained_after;
+      var moved = Math.abs(before - after) > 1e-9;
+      var gcls = 'cat' + (c.reverse_gap ? ' reverse' : '') + (c.unreliable ? ' unreliable' : '');
+      var g2 = svgEl('g', { 'class': gcls });
+
+      /* connector */
+      g2.appendChild(svgEl('line', {
+        x1: cx, x2: cx, y1: y(before), y2: y(after),
+        'class': 'connector' + (moved ? '' : ' flat')
+      }));
+
+      /* No arrowhead. Direction is already carried twice — by the connector
+         running from the hollow "before" to the filled "after" marker, and by
+         the legend naming both ends. Every placement tried either collided
+         with the dot or, tucked behind it, drew nothing at all. */
+
+      /* before */
+      g2.appendChild(mark(cx, y(before), c.reverse_gap, 'before'));
+      /* after */
+      g2.appendChild(mark(cx, y(after), c.reverse_gap, 'after'));
+
+      /* unreliable ring */
+      if (c.unreliable) {
+        g2.appendChild(svgEl('circle', {
+          cx: cx, cy: y(before), r: 8, 'class': 'unrel-ring'
+        }));
+      }
+
+      /* x label. A horizontal label only fits when the slot is wide enough for
+         the longest word; otherwise the labels of adjacent categories collide.
+         Below that width the whole label is rotated instead of being wrapped. */
+      var baseY = H - mb + 18;
+      if (rotate) {
+        var lr = svgEl('text', {
+          x: 0, y: 0, 'class': 'cat-lab', 'text-anchor': 'end',
+          transform: 'translate(' + (cx + 4) + ',' + (baseY + 2) + ') rotate(-40)'
+        });
+        lr.textContent = c.category + (c.unreliable ? ' *' : '') + '  (n=' + c.headcount + ')';
+        svg.appendChild(lr);
+      } else {
+        var lines = labelLines(c.category, maxChars);
+        lines.forEach(function (ln, li) {
+          var lx = svgEl('text', {
+            x: cx, y: baseY + li * 15, 'class': 'cat-lab', 'text-anchor': 'middle'
+          });
+          lx.textContent = ln + (c.unreliable && li === lines.length - 1 ? ' *' : '');
+          var lt = svgEl('title');
+          lt.textContent = c.category;
+          lx.appendChild(lt);
+          svg.appendChild(lx);
+        });
+        /* The headcount sits on a shared baseline set by the LONGEST name on
+           the axis, not by this label's own line count — otherwise a two-line
+           name ("Customer Support") drops its n= below everyone else's and the
+           row of counts stops reading as a row. */
+        var lx2 = svgEl('text', {
+          x: cx, y: baseY + maxLines * 15 + 2, 'class': 'cat-sub', 'text-anchor': 'middle'
+        });
+        lx2.textContent = 'n=' + c.headcount;
+        svg.appendChild(lx2);
+      }
+
+      /* Direct label on the selected points only (see labelled()). Offset away
+         from the "after" marker so the two never overlap. */
+      if (marked[i]) {
+        var ptxt = signedPct(before);
+        /* Flip the label inboard near the right edge — at the last category an
+           outboard label is cut off by the viewBox ("10.3%" rendered "10.3"). */
+        var wEst = ptxt.length * 7.2;
+        var flip = cx + 12 + wEst > W - mr;
+        var pl = svgEl('text', {
+          x: cx + (flip ? -12 : 12),
+          y: y(before) + (before < 0 ? 15 : -9),
+          'class': 'pt-lab', 'text-anchor': flip ? 'end' : 'start'
+        });
+        pl.textContent = ptxt;
+        g2.appendChild(pl);
+      }
+
+      var title = svgEl('title');
+      title.textContent = c.category + ': unexplained ' + signedPct(before) +
+        ' → ' + signedPct(after) +
+        (c.reverse_gap ? ' (gap favours women, not adjusted)' : '') +
+        (c.unreliable ? ' (statistically unreliable)' : '');
+      g2.appendChild(title);
+
+      /* Full-slot hover/focus target, drawn first so it sits under the marks
+         but covers the whole column: the reader should not have to hit a 9px
+         dot. Keyboard reaches it too — the tooltip is never the only route to
+         a value, the table below carries all of them. */
+      var band = svgEl('rect', {
+        x: cx - slotW / 2, y: mt, width: slotW, height: plotH, 'class': 'cat-band'
+      });
+      g2.insertBefore(band, g2.firstChild);
+      var hit = svgEl('rect', {
+        x: cx - slotW / 2, y: mt, width: slotW, height: plotH,
+        'class': 'cat-hit', tabindex: '0', role: 'img',
+        'aria-label': title.textContent
+      });
+      hit.addEventListener('mouseenter', function () { g2.setAttribute('class', gcls + ' hot'); });
+      hit.addEventListener('mouseleave', function () { g2.setAttribute('class', gcls); });
+      hit.addEventListener('focus', function () { g2.setAttribute('class', gcls + ' hot'); });
+      hit.addEventListener('blur', function () { g2.setAttribute('class', gcls); });
+      g2.appendChild(hit);
+
+      svg.appendChild(g2);
+    });
+
+    /* axis title */
+    /* y=14, not 12: the text baseline sits at y, so a 12.5px cap-height rose
+       above the top edge of the viewBox and was clipped. */
+    var yt = svgEl('text', { x: 4, y: 14, 'class': 'axis-title' });
+    yt.textContent = 'unexplained gap, %';
+    svg.appendChild(yt);
+
+    host.appendChild(svg);
+  }
+
+  function mark(cx, cy, isReverse, kind) {
+    var cls = 'pt pt-' + kind;
+    if (isReverse) {
+      var r = 5.2;
+      return svgEl('path', {
+        d: 'M ' + cx + ' ' + (cy - r) + ' L ' + (cx + r) + ' ' + cy +
+           ' L ' + cx + ' ' + (cy + r) + ' L ' + (cx - r) + ' ' + cy + ' Z',
+        'class': cls + ' rev'
+      });
+    }
+    return svgEl('circle', { cx: cx, cy: cy, r: 4.6, 'class': cls });
+  }
+
+  function niceStep(range) {
+    var raw = range / 5;
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var n = raw / mag;
+    var m = n >= 5 ? 5 : n >= 2 ? 2 : 1;
+    return m * mag;
+  }
+
+  /* --------------------------------------------------------------- table */
+
+  var COLS = [
+    { h: 'Category', cls: '' },
+    { h: 'n', cls: 'num' },
+    { h: 'Women / men', cls: 'num' },
+    { h: 'Gap, total pay', cls: 'num' },
+    { h: 'Gap, variable pay', cls: 'num' },
+    { h: 'Explained by grade and tenure', cls: 'num' },
+    { h: 'Unexplained residual', cls: 'num' },
+    { h: 'Residual after', cls: 'num' },
+    { h: 'Recipients', cls: 'num' },
+    { h: 'Base pay adjustment', cls: 'num' },
+    { h: 'Employer contributions', cls: 'num' },
+    { h: 'Total cost', cls: 'num' },
+    { h: 'Reliability', cls: '' }
+  ];
+
+  function renderTable(result, scenario) {
+    var thead = $('cat-head'), tbody = $('cat-body'), tfoot = $('cat-foot');
+    clear(thead); clear(tbody); clear(tfoot);
+
+    var htr = el('tr');
+    COLS.forEach(function (c) {
+      var th = el('th', c.cls, c.h);
+      th.setAttribute('scope', 'col');
+      htr.appendChild(th);
+    });
+    thead.appendChild(htr);
+
+    var sums = { rec: 0, adj: 0, con: 0, tot: 0, n: 0 };
+
+    result.categories.forEach(function (c) {
+      var s = c[scenario];
+      var tr = el('tr');
+      if (c.reverse_gap) tr.classList.add('row-reverse');
+      if (c.unreliable) tr.classList.add('row-unreliable');
+
+      var th = el('th', '', c.category);
+      th.setAttribute('scope', 'row');
+      tr.appendChild(th);
+
+      tr.appendChild(el('td', 'num', num(c.headcount)));
+      tr.appendChild(el('td', 'num', c.headcount_f + ' / ' + c.headcount_m));
+      tr.appendChild(el('td', 'num' + (c.raw_gap_mean_pct < 0 ? ' neg' : ''), signedPct(c.raw_gap_mean_pct)));
+      tr.appendChild(el('td', 'num' + (c.variable_gap_pct < 0 ? ' neg' : ''), signedPct(c.variable_gap_pct)));
+      tr.appendChild(el('td', 'num', signedPct(c.explained_pct)));
+      tr.appendChild(el('td', 'num strong' + (c.unexplained_pct < 0 ? ' neg' : ''), signedPct(c.unexplained_pct)));
+      tr.appendChild(el('td', 'num', signedPct(s.unexplained_after)));
+      tr.appendChild(el('td', 'num', num(s.recipients)));
+      tr.appendChild(el('td', 'num', money(s.adjustment)));
+      tr.appendChild(el('td', 'num', money(s.contributions)));
+      tr.appendChild(el('td', 'num strong', money(s.total_cost)));
+
+      var flags = [];
+      if (c.unreliable) flags.push('statistically unreliable');
+      if (c.reverse_gap) flags.push('gap favours women, not adjusted');
+      var fd = el('td', 'flags');
+      if (!flags.length) {
+        fd.appendChild(el('span', 'muted', '—'));
+      } else {
+        flags.forEach(function (f) { fd.appendChild(el('span', 'tag', f)); });
+      }
+      tr.appendChild(fd);
+
+      sums.n += c.headcount;
+      sums.rec += s.recipients;
+      sums.adj += s.adjustment;
+      sums.con += s.contributions;
+      sums.tot += s.total_cost;
+
+      tbody.appendChild(tr);
+    });
+
+    var ftr = el('tr');
+    var fth = el('th', '', 'All categories');
+    fth.setAttribute('scope', 'row');
+    ftr.appendChild(fth);
+    ftr.appendChild(el('td', 'num', num(sums.n)));
+    for (var i = 0; i < 6; i++) ftr.appendChild(el('td', 'num', ''));
+    ftr.appendChild(el('td', 'num', num(sums.rec)));
+    ftr.appendChild(el('td', 'num', money(sums.adj)));
+    ftr.appendChild(el('td', 'num', money(sums.con)));
+    ftr.appendChild(el('td', 'num strong', money(sums.tot)));
+    ftr.appendChild(el('td', '', ''));
+    tfoot.appendChild(ftr);
+  }
+
+  /* --------------------------------------------------------- self-check */
+
+  /* The checks run on every recompute, but a green banner on the first screen is
+     noise: it reports the expected state. Only a failure is worth the reader's
+     attention, and it matters most on their own CSV, where a broken figure would
+     otherwise look like a finding. Passing hides the element; failing shows it. */
+  function renderSelfCheck(result) {
+    var host = $('selfcheck');
+    clear(host);
+    host.hidden = false;
+
+    if (typeof CALC === 'undefined' || typeof CALC.selfCheck !== 'function') {
+      host.className = 'selfcheck pending';
+      host.appendChild(el('span', 'sc-dot'));
+      host.appendChild(el('span', 'sc-text',
+        'Self-check unavailable: the calculation engine is not loaded (fixture preview).'));
+      return;
+    }
+
+    var cr;
+    try {
+      cr = CALC.selfCheck(result);
+    } catch (e) {
+      host.className = 'selfcheck fail';
+      host.appendChild(el('span', 'sc-dot'));
+      host.appendChild(el('span', 'sc-text', 'Self-check threw an error: ' + (e && e.message)));
+      return;
+    }
+
+    var checks = (cr && cr.checks) || [];
+    var failed = checks.filter(function (c) { return !c.passed; });
+
+    if (cr && cr.passed && !failed.length) {
+      /* Hidden, not removed: the node keeps its aria-live region and the
+         checks/count stay queryable for the automated checks. */
+      host.className = 'selfcheck pass';
+      host.setAttribute('data-checks', String(checks.length));
+      host.hidden = true;
+      return;
+    }
+
+    host.className = 'selfcheck fail';
+    host.appendChild(el('span', 'sc-dot'));
+    var wrap = el('div', 'sc-text');
+    wrap.appendChild(el('div', 'sc-title',
+      'Self-check failed: ' + failed.length + ' of ' + checks.length + ' checks did not hold.'));
+    var ul = el('ul', 'sc-list');
+    failed.forEach(function (c) {
+      var li = el('li');
+      li.appendChild(el('span', 'sc-name', c.name));
+      if (c.detail) li.appendChild(el('span', 'sc-detail', ': ' + c.detail));
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+    host.appendChild(wrap);
+  }
+
+  /* -------------------------------------------------------------- method */
+
+  function renderMethod(result) {
+    var host = $('method-regression');
+    clear(host);
+    if (!result || !result.categories) return;
+    var table = el('table', 'mini');
+    var thead = el('thead');
+    var htr = el('tr');
+    ['Category', 'n', 'Intercept', 'Coef. grade', 'Coef. tenure', 'R²'].forEach(function (h) {
+      var th = el('th', h === 'Category' ? '' : 'num', h);
+      htr.appendChild(th);
+    });
+    thead.appendChild(htr);
+    table.appendChild(thead);
+    var tb = el('tbody');
+    result.categories.forEach(function (c) {
+      var r = c.regression || {};
+      var tr = el('tr');
+      tr.appendChild(el('td', '', c.category));
+      tr.appendChild(el('td', 'num', num(r.n)));
+      tr.appendChild(el('td', 'num', money(r.intercept)));
+      tr.appendChild(el('td', 'num', money(r.coef_grade)));
+      tr.appendChild(el('td', 'num', money(r.coef_tenure)));
+      /* isFinite(null) is true — null coerces to 0 — so the type check is the
+         real guard. An underdetermined category (too few rows to fit grade and
+         tenure) returns r_squared: null, and without this the whole render
+         dies on a small uploaded file. */
+      tr.appendChild(el('td', 'num',
+        typeof r.r_squared === 'number' && isFinite(r.r_squared) ? r.r_squared.toFixed(2) : '—'));
+      tb.appendChild(tr);
+    });
+    table.appendChild(tb);
+    host.appendChild(table);
+  }
+
+  /* ------------------------------------------------------------- caption */
+
+  function renderCaptions(result) {
+    var s = result.settings_used;
+    text($('cap-scenario'),
+      state.scenario === 'minimum' ? 'Minimum compliance' : 'Full equalisation');
+    text($('cap-scenario-2'),
+      state.scenario === 'minimum' ? 'minimum compliance' : 'full equalisation');
+    text($('cap-threshold'), s.threshold_pct + '%');
+    text($('data-source'), state.dataLabel +
+      (state.usingFixture ? ' (fixture preview — calculation engine not loaded)' : ''));
+  }
+
+  /* -------------------------------------------------------------- render */
+
+  function render(result) {
+    if (!result) return;
+    state.result = result;
+    renderHeadline(result);
+    renderSummary(result);
+    renderChart(result, state.scenario);
+    renderTable(result, state.scenario);
+    renderSelfCheck(result);
+    renderMethod(result);
+    renderCaptions(result);
+  }
+
+  /* ------------------------------------------------------------ recompute */
+
+  function haveCalc() {
+    return typeof CALC !== 'undefined' &&
+      typeof CALC.analyse === 'function';
+  }
+
+  function recompute() {
+    var settings = readSettings();
+    if (haveCalc() && state.employees) {
+      state.usingFixture = false;
+      var result;
+      try {
+        result = CALC.analyse(state.employees, settings);
+      } catch (e) {
+        showNotice('error', 'Calculation failed: ' + (e && e.message));
+        return;
+      }
+      render(result);
+      return;
+    }
+    /* fixture path: settings still shown, headline numbers are the fixture's */
+    state.usingFixture = true;
+    var fx = cloneFixtureWithSettings(settings);
+    render(fx);
+  }
+
+  function cloneFixtureWithSettings(settings) {
+    var fx = JSON.parse(JSON.stringify(FIXTURE_RESULT));
+    fx.settings_used = settings;
+    /* the only settings-dependent number the fixture can honestly restate */
+    var m = settings.implementation_month;
+    ['minimum', 'full'].forEach(function (k) {
+      fx.totals[k].cost_current_year = fx.totals[k].total_cost * (13 - m) / 12;
+      fx.totals[k].cost_next_year = fx.totals[k].total_cost;
+    });
+    fx.totals.difference.cost_current_year =
+      fx.totals.full.cost_current_year - fx.totals.minimum.cost_current_year;
+    fx.totals.difference.cost_next_year =
+      fx.totals.full.cost_next_year - fx.totals.minimum.cost_next_year;
+    return fx;
+  }
+
+  /* ----------------------------------------------------------------- CSV */
+
+  function showNotice(kind, msg) {
+    var host = $('csv-messages');
+    var box = el('div', 'notice ' + kind);
+    box.appendChild(el('span', 'notice-text', msg));
+    host.appendChild(box);
+  }
+
+  function clearNotices() { clear($('csv-messages')); }
+
+  function handleFile(file) {
+    clearNotices();
+    if (!file) return;
+
+    if (typeof CSV === 'undefined' || typeof CSV.parse !== 'function') {
+      showNotice('error', 'CSV reader is not loaded in this preview build.');
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onerror = function () {
+      showNotice('error', 'The file could not be read.');
+    };
+    reader.onload = function (ev) {
+      var parsed;
+      try {
+        parsed = CSV.parse(String(ev.target.result));
+      } catch (e) {
+        showNotice('error', 'The file could not be parsed: ' + (e && e.message));
+        return;
+      }
+      (parsed.warnings || []).forEach(function (w) { showNotice('warn', w); });
+
+      if (!parsed.ok) {
+        (parsed.errors || ['The file could not be used.']).forEach(function (er) {
+          showNotice('error', er);
+        });
+        return;
+      }
+      state.employees = parsed.employees;
+      state.dataLabel = file.name + ' — ' + parsed.employees.length + ' rows';
+      showNotice('ok', 'Loaded ' + parsed.employees.length + ' rows from ' + file.name +
+        '. Nothing left your browser.');
+      $('btn-demo').hidden = false;
+      recompute();
+    };
+    reader.readAsText(file);
+  }
+
+  function backToDemo() {
+    clearNotices();
+    $('csv-input').value = '';
+    $('btn-demo').hidden = true;
+    if (haveCalc() && typeof CALC.generateDemoData === 'function') {
+      state.employees = CALC.generateDemoData();
+      state.dataLabel = 'demo data — ' + state.employees.length + ' synthetic employees';
+    } else {
+      state.employees = null;
+      state.dataLabel = 'demo data';
+    }
+    recompute();
+  }
+
+  /* ------------------------------------------------------------- controls */
+
+  function bindControls() {
+    ['ctl-threshold', 'ctl-month', 'ctl-rate-below', 'ctl-rate-above', 'ctl-ceiling']
+      .forEach(function (id) {
+        var node = $(id);
+        node.addEventListener('input', recompute);
+        node.addEventListener('change', recompute);
+      });
+
+    $('ctl-reset').addEventListener('click', function () {
+      $('ctl-threshold').value = '5';
+      $('ctl-month').value = '7';
+      $('ctl-rate-below').value = '31.5';
+      $('ctl-rate-above').value = '1.15';
+      $('ctl-ceiling').value = '61214';
+      recompute();
+    });
+
+    Array.prototype.forEach.call(
+      document.querySelectorAll('input[name="scenario"]'),
+      function (r) {
+        r.addEventListener('change', function () {
+          if (!r.checked) return;
+          state.scenario = r.value;
+          if (state.result) {
+            renderChart(state.result, state.scenario);
+            renderTable(state.result, state.scenario);
+            renderCaptions(state.result);
+          }
+        });
+      }
+    );
+
+    $('csv-input').addEventListener('change', function (e) {
+      handleFile(e.target.files && e.target.files[0]);
+    });
+    $('btn-demo').addEventListener('click', backToDemo);
+  }
+
+  /* ----------------------------------------------------------------- init */
+
+  function init() {
+    bindControls();
+    if (haveCalc() && typeof CALC.generateDemoData === 'function') {
+      try {
+        state.employees = CALC.generateDemoData();
+        state.dataLabel = 'demo data — ' + state.employees.length + ' synthetic employees';
+      } catch (e) {
+        state.employees = null;
+      }
+    }
+    recompute();
+    /* The viewBox is derived from the container width, so a resize (or a phone
+       turned sideways) has to redraw the chart — otherwise the box keeps the
+       width it was built at and the labels scale wrongly again. Debounced:
+       a drag fires resize continuously, and only the final width matters. */
+    var resizeTimer = null;
+    var lastChartW = 0;
+    window.addEventListener('resize', function () {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        var host = $('chart');
+        if (!host || !state.result) return;
+        var w = Math.round(host.getBoundingClientRect().width);
+        /* Redraw only on a real width change: an on-screen keyboard opening
+           fires resize with the width untouched. */
+        if (w && Math.abs(w - lastChartW) > 1) {
+          lastChartW = w;
+          renderChart(state.result, state.scenario);
+        }
+      }, 150);
+    });
+  }
+
+  return {
+    init: init,
+    render: render,
+    readSettings: readSettings,
+    recompute: recompute,
+    _state: state
+  };
+})();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', UI.init);
+} else {
+  UI.init();
+}
+
+</script>
+</body>
+</html>
