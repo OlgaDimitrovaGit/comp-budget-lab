@@ -1,0 +1,11 @@
+id,category,gender,base_salary,variable_pay,tenure_years,grade,fte,months_worked
+E001,Engineering,F,54000,6500,3.5,6,1.0,12
+E002,Engineering,M,59500,9200,5.0,6,1.0,12
+E003,Engineering,M,71000,14000,8.0,8,1.0,12
+E004,Engineering,F,48000,4000,1.5,5,0.8,12
+E005,Sales,F,41000,7000,2.0,5,1.0,12
+E006,Sales,M,42500,11500,2.5,5,1.0,12
+E007,Sales,M,52000,8750,6.0,7,1.0,7
+E008,Customer Support,F,31000,1200,4.0,4,0.5,12
+E009,Customer Support,M,33500,1500,4.5,4,1.0,12
+E010,Customer Support,F,29000,900,1.0,3,1.0,12
