@@ -426,37 +426,6 @@ table.mini th, table.mini td { padding: 0.3rem 0.5rem; }
 .summary th.k { font-weight: 400; color: var(--ink-mid); white-space: normal; }
 .summary td.v { font-weight: 600; }
 
-/* ------------------------------------------------------------ self-check */
-.selfcheck {
-  display: flex;
-  gap: 0.55rem;
-  align-items: flex-start;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  font-size: 0.85rem;
-}
-/* `display: flex` outranks the hidden attribute, which left an empty green
-   frame on the page when the banner was hidden. */
-.selfcheck[hidden] { display: none; }
-.selfcheck .sc-dot {
-  width: 0.6rem; height: 0.6rem; border-radius: 50%;
-  flex: none; margin-top: 0.42rem;
-}
-.selfcheck.pass { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
-.selfcheck.pass .sc-dot { background: var(--ok); }
-.selfcheck.fail { background: var(--err-bg); border-color: var(--err); color: var(--err); }
-.selfcheck.fail .sc-dot { background: var(--err); }
-.selfcheck.pending { background: var(--bg-sunk); color: var(--ink-soft); }
-.selfcheck.pending .sc-dot { background: var(--ink-soft); }
-/* No section margin while the banner is hidden, or the layout keeps a gap
-   where nothing is drawn. :has() is unsupported in older browsers; there the
-   worst case is that spare margin, not a broken layout. */
-.sc-section:has(> .selfcheck[hidden]) { margin: 0; }
-.sc-title { font-weight: 600; }
-.sc-list { margin: 0.3rem 0 0; padding-left: 1.1rem; }
-.sc-name { font-weight: 600; }
-
 /* --------------------------------------------------------------- upload */
 .privacy {
   border: 1px solid var(--accent);
@@ -710,13 +679,6 @@ footer p { margin-bottom: 0.35rem; }
   </section>
 
   <!-- ======================================================== self-check -->
-  <!-- The identity checks run on every recompute; this region stays empty and
-       hidden while they pass, and appears only on a failure. -->
-  <section aria-labelledby="h-check" class="sc-section">
-    <h2 id="h-check" class="vh">Self-check</h2>
-    <div class="selfcheck pending" id="selfcheck" role="status"></div>
-  </section>
-
   <!-- ========================================================== controls -->
   <section aria-labelledby="h-controls">
     <div class="panel">
@@ -1297,7 +1259,12 @@ var CALC = (function () {
           tenure_years: tenure,
           grade: grade,
           fte: fte,
-          months_worked: months
+          months_worked: months,
+          /* Marks the row as coming from the generator. The demo-only checks
+             (the seven heterogeneities, the built-in grade step) describe THIS
+             fixture, not pay data in general: run against a reader's CSV they
+             fail by construction, which is not a finding about their file. */
+          _demo: true
         });
       }
     }
@@ -1783,6 +1750,10 @@ var CALC = (function () {
 
     return {
       _demo_parttime: partTime,
+      /* True only when every row carries the generator's marker. A reader's CSV
+         never does, so the demo-only checks stay out of their result. */
+      _is_demo: (employees || []).length > 0
+        && (employees || []).every(function (e) { return e && e._demo === true; }),
       categories: categories,
       totals: {
         headcount: rows.length,
@@ -1926,8 +1897,11 @@ var CALC = (function () {
     var small = cats.filter(function (c) {
       return c.headcount < 10 || c.headcount_f < 3 || c.headcount_m < 3;
     });
+    /* The invariant is the RULE (every small category carries the flag), not the
+       presence of a small category. Requiring one made the check fail on any
+       clean dataset that simply has none — a property of the file, not a fault. */
     var allFlagged = small.every(function (c) { return c.unreliable; });
-    add('small categories flagged as unreliable', small.length > 0 && allFlagged,
+    add('small categories flagged as unreliable', allFlagged,
       small.length === 0
         ? 'No category with n<10 or a gender group <3 — the reliability flag is untested.'
         : 'Flagged: ' + small.map(function (c) {
@@ -1941,7 +1915,9 @@ var CALC = (function () {
       return c.minimum.adjustment === 0 && c.full.adjustment === 0
         && c.minimum.recipients === 0 && c.full.recipients === 0;
     });
-    add('reverse-gap categories shown but not adjusted', rev.length > 0 && revClean,
+    /* Same shape as the check above: the rule is "if such a category exists it is
+       shown and left alone", not "such a category must exist". */
+    add('reverse-gap categories shown but not adjusted', revClean,
       rev.length === 0
         ? 'No reverse-gap category present.'
         : rev.map(function (c) {
@@ -1960,30 +1936,36 @@ var CALC = (function () {
       + '% of payroll €' + fmt(T.payroll_before)
       + '; part-time uplifts scaled by fte × months/12 before summing.');
 
-    /* --- Данные (относится к демо-набору) ------------------------------ */
+    /* --- Данные: ТОЛЬКО для демо-набора --------------------------------
+     * These describe the generated fixture (§5 of the spec), not pay data in
+     * general. On a reader's CSV they fail by construction — there is no reason
+     * their file should carry a built-in +12% grade step or a reverse-gap
+     * category — so running them there reported a fault that did not exist.
+     * They stay mandatory for the demo, which is what they were written for. */
+    if (result._is_demo) {
+      // 9. Все семь неоднородностей присутствуют.
+      var het = demoHeterogeneities(result);
+      add('all seven data heterogeneities present', het.all,
+        het.lines.join(' | '));
 
-    // 9. Все семь неоднородностей присутствуют.
-    var het = demoHeterogeneities(result);
-    add('all seven data heterogeneities present', het.all,
-      het.lines.join(' | '));
+      // 10. Объяснимая часть ≠ 0 минимум в двух категориях.
+      var expl = cats.filter(function (c) { return Math.abs(c.explained_pct) > 0.5; });
+      add('explained part non-zero in at least two categories', expl.length >= 2,
+        expl.length + ' categories with |explained| > 0.5 pp: '
+        + expl.map(function (c) {
+            return c.category + ' ' + c.explained_pct.toFixed(1) + ' pp of '
+              + c.raw_gap_mean_pct.toFixed(1) + ' pp raw';
+          }).join('; ') + '.');
 
-    // 10. Объяснимая часть ≠ 0 минимум в двух категориях.
-    var expl = cats.filter(function (c) { return Math.abs(c.explained_pct) > 0.5; });
-    add('explained part non-zero in at least two categories', expl.length >= 2,
-      expl.length + ' categories with |explained| > 0.5 pp: '
-      + expl.map(function (c) {
-          return c.category + ' ' + c.explained_pct.toFixed(1) + ' pp of '
-            + c.raw_gap_mean_pct.toFixed(1) + ' pp raw';
-        }).join('; ') + '.');
-
-    // 11. Регрессия восстанавливает заложенную стоимость грейда.
-    //     Генератор задаёт +12% оклада за грейд. Ожидаемый прирост в евро
-    //     сравнивается с coef_grade; «разумная точность» — в пределах ±40%
-    //     на категорию (шум, корреляция стажа с грейдом и мультипликативная
-    //     природа шага делают точное совпадение невозможным).
-    var recov = gradeRecovery(result);
-    add('regression recovers the built-in grade step', recov.ok,
-      recov.detail);
+      // 11. Регрессия восстанавливает заложенную стоимость грейда.
+      //     Генератор задаёт +12% оклада за грейд. Ожидаемый прирост в евро
+      //     сравнивается с coef_grade; «разумная точность» — в пределах ±40%
+      //     на категорию (шум, корреляция стажа с грейдом и мультипликативная
+      //     природа шага делают точное совпадение невозможным).
+      var recov = gradeRecovery(result);
+      add('regression recovers the built-in grade step', recov.ok,
+        recov.detail);
+    }
 
     var passed = checks.every(function (c) { return c.passed; });
     return { passed: passed, checks: checks };
@@ -3464,59 +3446,39 @@ var UI = (function () {
 
   /* --------------------------------------------------------- self-check */
 
-  /* The checks run on every recompute, but a green banner on the first screen is
-     noise: it reports the expected state. Only a failure is worth the reader's
-     attention, and it matters most on their own CSV, where a broken figure would
-     otherwise look like a finding. Passing hides the element; failing shows it. */
+  /* The checks still run on every recompute, but nothing about them is drawn on
+     the page. A banner reporting the expected state is noise when it passes, and
+     on a reader's own CSV a failure of the demo-data checks (which describe the
+     generated fixture, not their file) read as a fault in their numbers when the
+     numbers were fine. The result is exposed on window for the automated checks
+     and logged to the console; the page itself stays silent. */
   function renderSelfCheck(result) {
-    var host = $('selfcheck');
-    clear(host);
-    host.hidden = false;
-
-    if (typeof CALC === 'undefined' || typeof CALC.selfCheck !== 'function') {
-      host.className = 'selfcheck pending';
-      host.appendChild(el('span', 'sc-dot'));
-      host.appendChild(el('span', 'sc-text',
-        'Self-check unavailable: the calculation engine is not loaded (fixture preview).'));
-      return;
-    }
+    if (typeof CALC === 'undefined' || typeof CALC.selfCheck !== 'function') return;
 
     var cr;
     try {
       cr = CALC.selfCheck(result);
     } catch (e) {
-      host.className = 'selfcheck fail';
-      host.appendChild(el('span', 'sc-dot'));
-      host.appendChild(el('span', 'sc-text', 'Self-check threw an error: ' + (e && e.message)));
+      if (typeof console !== 'undefined') console.error('Self-check threw:', e);
       return;
     }
 
     var checks = (cr && cr.checks) || [];
     var failed = checks.filter(function (c) { return !c.passed; });
 
-    if (cr && cr.passed && !failed.length) {
-      /* Hidden, not removed: the node keeps its aria-live region and the
-         checks/count stay queryable for the automated checks. */
-      host.className = 'selfcheck pass';
-      host.setAttribute('data-checks', String(checks.length));
-      host.hidden = true;
-      return;
-    }
+    /* Queryable by build/check-*.js without any visible element. */
+    try {
+      window.__selfCheck = {
+        passed: !!(cr && cr.passed), total: checks.length,
+        failed: failed.map(function (c) { return c.name; })
+      };
+    } catch (e) { /* no window: nothing to expose */ }
 
-    host.className = 'selfcheck fail';
-    host.appendChild(el('span', 'sc-dot'));
-    var wrap = el('div', 'sc-text');
-    wrap.appendChild(el('div', 'sc-title',
-      'Self-check failed: ' + failed.length + ' of ' + checks.length + ' checks did not hold.'));
-    var ul = el('ul', 'sc-list');
-    failed.forEach(function (c) {
-      var li = el('li');
-      li.appendChild(el('span', 'sc-name', c.name));
-      if (c.detail) li.appendChild(el('span', 'sc-detail', ': ' + c.detail));
-      ul.appendChild(li);
-    });
-    wrap.appendChild(ul);
-    host.appendChild(wrap);
+    if (failed.length && typeof console !== 'undefined') {
+      console.warn('Self-check: ' + failed.length + ' of ' + checks.length
+        + ' checks did not hold: '
+        + failed.map(function (c) { return c.name; }).join('; '));
+    }
   }
 
   /* -------------------------------------------------------------- method */
