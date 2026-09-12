@@ -709,8 +709,8 @@ def build(csv_path, out_path, title_note):
 
 
 if __name__ == "__main__":
-    src = sys.argv[1] if len(sys.argv) > 1 else "build/sample.csv"
-    dst = sys.argv[2] if len(sys.argv) > 2 else "build/excel/pay-gap-model-mini.xlsx"
-    note = sys.argv[3] if len(sys.argv) > 3 else "Mini version on the demo fixture (10 rows)"
+    src = sys.argv[1] if len(sys.argv) > 1 else "build/excel/demo-data.csv"
+    dst = sys.argv[2] if len(sys.argv) > 2 else "pay-gap-model.xlsx"
+    note = sys.argv[3] if len(sys.argv) > 3 else "Demo dataset, 212 employees"
     rows, cats = build(src, dst, note)
     print("OK: %s  (%d rows, %d categories)" % (dst, rows, cats))

@@ -13,7 +13,7 @@
 $ErrorActionPreference = "Stop"
 
 $here  = Split-Path -Parent $MyInvocation.MyCommand.Path
-$book  = Join-Path $here "budget-plan-fact-model.xlsx"
+$book  = Join-Path (Split-Path $here -Parent) "budget-plan-fact-model.xlsx"
 $csv   = Join-Path $here "budget-plan-fact.csv"
 
 if (-not (Test-Path $book)) { throw "No workbook at $book — run python build_model.py first" }

@@ -2,7 +2,7 @@
 """
 A sample CSV with a header: it shows the format, not the data.
 
-The first artefact's sample (build/sample.csv) is built the same way: a few
+The first artefact's sample (sample.csv) is built the same way: a few
 rows of round numbers. Its job is to give someone a file they can open,
 understand the structure of, and fill with their own figures.
 
@@ -70,7 +70,7 @@ def build():
 
 def main():
     rows = build()
-    path = os.path.join(HERE, "sample.csv")
+    path = os.path.join(os.path.dirname(HERE), "sample.csv")
     with open(path, "w", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(
             fh, fieldnames=["department", "month", "month_no", "plan", "fact", "forecast"])
