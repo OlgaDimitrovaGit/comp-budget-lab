@@ -73,6 +73,30 @@ Categories with fewer than 10 employees, or fewer than 3 of either gender, are m
 
 Not in scope: grouping work of equal value into categories, optimising the allocation of a limited budget, comparing methods of selecting recipients, several jurisdictions at once, salary ranges and compa-ratio.
 
+## Payroll Budget: Plan vs Actual
+
+**[Open the dashboard](https://olgadimitrovagit.github.io/comp-budget-lab/budget-plan-fact/)**
+
+A signalling dashboard, not an analytical one. An HR director opens a link on a phone and sees one of two outcomes within seconds: execution is on track, or there is a problem and a call is due. It answers where the budget diverges from plan and by how much, not why.
+
+Like the calculator, the page makes no network requests. Load your own CSV and the numbers are computed in the tab; the page hands back the same self-contained file with your data inside.
+
+### On the demo data
+
+Seven departments, twelve months, annual payroll plan EUR 16,549,701. Actuals run through August; September to December are forecast.
+
+| | Plan | Expected | Deviation |
+|---|---|---|---|
+| Jan-Aug (actual) | EUR 11,005,551 | EUR 11,275,717 | **+EUR 270,166** (+2.45%) |
+| Sep-Dec (forecast) | EUR 5,544,150 | EUR 5,812,405 | **+EUR 268,255** (+4.84%) |
+| **Full year** | **EUR 16,549,701** | **EUR 17,088,122** | **+EUR 538,421** (+3.25%) |
+
+The "problem" threshold defaults to 3% and is configurable on the page. The full-year variance is above it, so the dashboard signals.
+
+The September turn is not invented: from that month a salary equalisation takes effect, EUR 396,522 a year including employer contributions. That figure is the output of the calculator above. This dashboard asks the next question - what the decision does to a budget that was already approved.
+
+Details, input format, the Excel model and how to reproduce the numbers: [budget-plan-fact/README.md](budget-plan-fact/README.md).
+
 ## Licence
 
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Reuse and adapt it, including commercially, with attribution.

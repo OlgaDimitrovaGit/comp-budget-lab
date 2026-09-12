@@ -1,0 +1,25 @@
+department,month,month_no,plan,fact,forecast
+Sales,Jan,1,120000,117600,
+Sales,Feb,2,120000,118200,
+Sales,Mar,3,120000,117000,
+Sales,Apr,4,120000,118800,
+Sales,May,5,120000,117300,
+Sales,Jun,6,120000,118500,
+Sales,Jul,7,120000,116700,
+Sales,Aug,8,120000,117900,
+Sales,Sep,9,120000,,123000
+Sales,Oct,10,120000,,123000
+Sales,Nov,11,120000,,123000
+Sales,Dec,12,120000,,123000
+Customer Support,Jan,1,80000,81200,
+Customer Support,Feb,2,80000,80800,
+Customer Support,Mar,3,80000,81600,
+Customer Support,Apr,4,80000,80400,
+Customer Support,May,5,80000,81000,
+Customer Support,Jun,6,80000,81400,
+Customer Support,Jul,7,80000,80600,
+Customer Support,Aug,8,80000,81800,
+Customer Support,Sep,9,80000,,80000
+Customer Support,Oct,10,80000,,80000
+Customer Support,Nov,11,80000,,80000
+Customer Support,Dec,12,80000,,80000
