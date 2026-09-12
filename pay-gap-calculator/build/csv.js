@@ -1,20 +1,19 @@
 /* ============================================================================
-   Часть C — импорт CSV и валидация.
-   Публичный интерфейс: CSV.parse(text) → ParseResult (§4 CONTRACT.md).
+   Part C — CSV import and validation.
+   Public interface: CSV.parse(text) → ParseResult.
 
-   Чистый ES2020, глобальный объект, без модулей и внешних зависимостей.
-   Основная функция чистая: строка на входе, объект на выходе.
-   DOM трогает только необязательный хелпер CSV.readFile (FileReader).
-
-   Сообщения пользователю — по-английски: интерфейс англоязычный.
+   Plain ES2020, a global object, no modules and no external dependencies.
+   The main function is pure: a string in, an object out.
+   The only part that touches the DOM is the optional CSV.readFile helper
+   (FileReader).
    ========================================================================== */
 
 var CSV = (function () {
   'use strict';
 
-  // --- Константы -----------------------------------------------------------
+  // --- Constants -----------------------------------------------------------
 
-  // Обязательные колонки по §3 спеки и §4 контракта.
+  // Required columns.
   var REQUIRED = [
     'category',
     'gender',
@@ -24,15 +23,15 @@ var CSV = (function () {
     'grade'
   ];
 
-  // Необязательные колонки с молчаливыми дефолтами.
+  // Optional columns with silent defaults.
   var DEFAULTS = { fte: 1.0, months_worked: 12 };
 
-  // Доля испорченных строк, выше которой файл считается негодным целиком.
+  // Share of broken rows above which the file is rejected outright.
   var MAX_BAD_ROW_SHARE = 0.20;
 
-  // Словарь синонимов заголовков из типовых HR-выгрузок.
-  // Ключ — уже нормализованный заголовок (нижний регистр, подчёркивания),
-  // значение — каноническое имя колонки.
+  // Synonyms for headers found in typical HR exports.
+  // The key is an already-normalised header (lower case, underscores); the
+  // value is the canonical column name.
   var SYNONYMS = {
     // base_salary
     salary: 'base_salary',
@@ -84,7 +83,7 @@ var CSV = (function () {
     personnel_number: 'id'
   };
 
-  // Распознаваемые значения пола → 'F' | 'M'.
+  // Recognised gender values → 'F' | 'M'.
   var GENDER_MAP = {
     f: 'F', female: 'F', woman: 'F', women: 'F', w: 'F',
     'ж': 'F', 'жен': 'F', 'женщина': 'F', 'женский': 'F',
@@ -92,11 +91,12 @@ var CSV = (function () {
     'м': 'M', 'муж': 'M', 'мужчина': 'M', 'мужской': 'M'
   };
 
-  // --- Низкоуровневый парсер CSV -------------------------------------------
+  // --- Low-level CSV parser ------------------------------------------------
 
   /**
-   * Убирает BOM (Excel ставит его почти всегда) и нормализует переводы строк.
-   * CRLF и одиночный CR приводятся к LF, чтобы дальше работать с одним видом.
+   * Strips the BOM (Excel writes one almost always) and normalises line breaks.
+   * CRLF and a lone CR both become LF, so the rest of the code deals with one
+   * form only.
    */
   function stripBomAndNormalise(text) {
     var s = String(text == null ? '' : text);
@@ -105,10 +105,11 @@ var CSV = (function () {
   }
 
   /**
-   * Автоопределение разделителя: запятая или точка с запятой.
-   * Считаем вхождения ВНЕ кавычек в первых непустых строках; побеждает частый.
-   * При ничьей выбираем точку с запятой — европейские выгрузки встречаются чаще
-   * в сценариях, где ничья вообще возможна (десятичная запятая внутри чисел).
+   * Detects the delimiter: comma or semicolon.
+   * Occurrences OUTSIDE quotes are counted over the first non-empty lines, and
+   * the more frequent one wins. On a tie the semicolon is chosen: European
+   * exports are the more common source of the situations where a tie is
+   * possible at all (a decimal comma inside numbers).
    */
   function detectDelimiter(text) {
     var counts = { ',': 0, ';': 0 };
@@ -117,7 +118,7 @@ var CSV = (function () {
     for (var i = 0; i < text.length; i++) {
       var ch = text[i];
       if (ch === '"') {
-        // Удвоенная кавычка внутри поля — не смена режима.
+        // A doubled quote inside a field is not a change of mode.
         if (inQuotes && text[i + 1] === '"') { i++; continue; }
         inQuotes = !inQuotes;
         continue;
@@ -126,7 +127,7 @@ var CSV = (function () {
         if (ch === ',' || ch === ';') counts[ch]++;
         else if (ch === '\n') {
           lines++;
-          if (lines >= 5) break; // пяти строк достаточно
+          if (lines >= 5) break; // five lines are enough
         }
       }
     }
@@ -136,9 +137,9 @@ var CSV = (function () {
   }
 
   /**
-   * Разбор текста в матрицу строк. Поддерживает кавычки, удвоенные кавычки
-   * внутри поля ("" → "), переводы строк внутри кавычек.
-   * Пустые строки пропускаются (в том числе хвостовые).
+   * Parses the text into a matrix of rows. Supports quotes, doubled quotes
+   * inside a field ("" → "), and line breaks inside quotes.
+   * Empty rows are skipped, trailing ones included.
    */
   function splitRows(text, delim) {
     var rows = [];
@@ -154,7 +155,7 @@ var CSV = (function () {
     }
     function pushRow() {
       pushField();
-      // Строка считается пустой, если все её поля пусты.
+      // A row counts as empty when every one of its fields is empty.
       var empty = row.every(function (c) { return c === ''; });
       if (!empty) rows.push(row);
       row = [];
@@ -176,17 +177,17 @@ var CSV = (function () {
         else field += ch;
       }
     }
-    // Хвост последней строки без завершающего перевода.
+    // The tail of the last row, when it has no closing line break.
     if (field !== '' || row.length > 0) pushRow();
     return rows;
   }
 
-  // --- Нормализация заголовков ---------------------------------------------
+  // --- Header normalisation ------------------------------------------------
 
   /**
-   * «Base Salary», «base-salary», «BASE_SALARY» → base_salary.
-   * Нижний регистр, обрезка пробелов, пробелы/дефисы/точки → подчёркивание,
-   * схлопывание повторов и обрезка подчёркиваний по краям.
+   * "Base Salary", "base-salary", "BASE_SALARY" → base_salary.
+   * Lower case, trimmed, spaces/hyphens/dots → underscore, repeats collapsed
+   * and underscores trimmed from both ends.
    */
   function normaliseHeader(h) {
     return String(h == null ? '' : h)
@@ -198,35 +199,36 @@ var CSV = (function () {
       .replace(/^_|_$/g, '');
   }
 
-  /** Каноническое имя колонки: нормализация + словарь синонимов. */
+  /** Canonical column name: normalisation plus the synonym dictionary. */
   function canonicalHeader(h) {
     var n = normaliseHeader(h);
     return Object.prototype.hasOwnProperty.call(SYNONYMS, n) ? SYNONYMS[n] : n;
   }
 
-  // --- Разбор значений ------------------------------------------------------
+  // --- Value parsing --------------------------------------------------------
 
   /**
-   * Числа в европейском и обычном формате.
-   * Принимает «52.000,50», «52 000,50», «52000.50», «€ 52,000.50», «1 234».
-   * Отбрасывает валютные символы и пробелы (в т.ч. неразрывные) как разделители тысяч.
-   * Формат определяется по позиции ПОСЛЕДНЕГО разделителя:
-   *   - если после него 1–2 цифры и до конца строки — он десятичный;
-   *   - иначе оба вида разделителей — тысячные.
-   * Возвращает число или null, если распознать не удалось.
+   * Numbers in both European and plain format.
+   * Accepts "52.000,50", "52 000,50", "52000.50", "€ 52,000.50", "1 234".
+   * Currency symbols and spaces (non-breaking ones included) are discarded as
+   * thousands separators.
+   * The format is decided by the position of the LAST separator:
+   *   - if 1-2 digits follow it and then the string ends, it is decimal;
+   *   - otherwise both kinds of separator are thousands separators.
+   * Returns a number, or null when it cannot be recognised.
    */
   function parseNumber(raw) {
     if (raw == null) return null;
     var s = String(raw).trim();
     if (s === '') return null;
 
-    // Убираем валюту, пробелы (обычные, неразрывные, узкие) и апострофы-разделители.
+    // Strip currency, spaces (ordinary, non-breaking, narrow) and apostrophe separators.
     s = s.replace(/[€$£¥\s   ']/g, '');
     if (s === '') return null;
 
-    // Знак.
+    // Sign.
     var negative = false;
-    if (/^\(.*\)$/.test(s)) { negative = true; s = s.slice(1, -1); } // (1 234) — минус в бухгалтерском виде
+    if (/^\(.*\)$/.test(s)) { negative = true; s = s.slice(1, -1); } // (1 234) — accounting-style minus
     if (s[0] === '+') s = s.slice(1);
     else if (s[0] === '-') { negative = true; s = s.slice(1); }
 
@@ -242,10 +244,10 @@ var CSV = (function () {
     } else {
       var sepChar = s[lastSep];
       var tail = s.slice(lastSep + 1);
-      // Десятичный разделитель: 1–2 цифры в хвосте и он единственный в своём роде.
+      // Decimal separator: 1-2 digits in the tail, and it is the only one of its kind.
       var sameCharCount = s.split(sepChar).length - 1;
       var isDecimal = /^[0-9]{1,2}$/.test(tail) && sameCharCount === 1;
-      // «1.234» неоднозначно: точка с тремя цифрами — тысячи, поэтому 1–2 цифры.
+      // "1.234" is ambiguous: a dot with three digits means thousands, hence 1-2 digits.
       if (isDecimal) {
         intPart = s.slice(0, lastSep);
         fracPart = tail;
@@ -262,7 +264,7 @@ var CSV = (function () {
     return negative ? -value : value;
   }
 
-  /** Пол: F/M/female/male/woman/man/ж/м в любом регистре → 'F' | 'M' | null. */
+  /** Gender: F/M/female/male/woman/man in any case → 'F' | 'M' | null. */
   function parseGender(raw) {
     if (raw == null) return null;
     var s = String(raw).trim().toLowerCase().replace(/[.\s]+$/, '');
@@ -270,22 +272,22 @@ var CSV = (function () {
     return Object.prototype.hasOwnProperty.call(GENDER_MAP, s) ? GENDER_MAP[s] : null;
   }
 
-  /** Порядковый id вида E001, E002, … когда колонки id в файле нет. */
+  /** Sequential ids of the form E001, E002, … when the file has no id column. */
   function makeId(n) {
     var s = String(n);
     while (s.length < 3) s = '0' + s;
     return 'E' + s;
   }
 
-  /** Склонение по-английски: 1 row / 2 rows. */
+  /** Plural agreement: 1 row / 2 rows. */
   function rowWord(n) { return n === 1 ? 'row' : 'rows'; }
 
-  // --- Публичный parse ------------------------------------------------------
+  // --- Public parse ---------------------------------------------------------
 
   /**
    * CSV.parse(text) → { ok, employees, errors, warnings }
-   * Одна кривая строка не роняет файл: она попадает в warnings и пропускается.
-   * Если испорчено больше 20% строк — это ошибка файла целиком.
+   * A single malformed row does not sink the file: it goes into warnings and is
+   * skipped. If more than 20% of rows are broken, the file itself is at fault.
    */
   function parse(text) {
     var errors = [];
@@ -308,7 +310,7 @@ var CSV = (function () {
       return fail();
     }
 
-    // --- Заголовки ---
+    // --- Headers ---
     var rawHeaders = rows[0];
     var headers = rawHeaders.map(canonicalHeader);
     var present = {};
@@ -322,8 +324,8 @@ var CSV = (function () {
     });
 
     if (missing.length > 0) {
-      // Сообщение должно называть недостающее и показывать найденное,
-      // чтобы пользователь сразу понял, что чинить в выгрузке.
+      // The message must name what is missing and show what was found, so the
+      // user can see straight away what to fix in their export.
       var what = missing.length === 1
         ? 'Required column "' + missing[0] + '" is missing.'
         : 'Required columns are missing: ' + missing.map(function (m) { return '"' + m + '"'; }).join(', ') + '.';
@@ -342,9 +344,9 @@ var CSV = (function () {
       return fail();
     }
 
-    // --- Строки ---
+    // --- Rows ---
     var employees = [];
-    var badRows = [];              // сообщения о пропущенных строках
+    var badRows = [];              // messages about skipped rows
     var dataRowCount = rows.length - 1;
     var defaultsUsed = { fte: 0, months_worked: 0 };
     var idSeen = {};
@@ -353,7 +355,7 @@ var CSV = (function () {
     var genderSeen = { F: 0, M: 0 };
     var duplicateIdCount = 0;
 
-    // Значение ячейки по каноническому имени колонки.
+    // Cell value by canonical column name.
     function cell(row, name) {
       var idx = present[name];
       if (idx === undefined) return '';
@@ -363,10 +365,10 @@ var CSV = (function () {
 
     for (var r = 1; r < rows.length; r++) {
       var row = rows[r];
-      var lineNo = r + 1; // номер строки в файле, как его видит пользователь
+      var lineNo = r + 1; // the line number in the file as the user sees it
       var problem = null;
 
-      // Пол.
+      // Gender.
       var genderRaw = cell(row, 'gender');
       var gender = parseGender(genderRaw);
       if (gender === null) {
@@ -375,11 +377,11 @@ var CSV = (function () {
           : 'gender value "' + genderRaw + '" is not recognised (use F/M, female/male)';
       }
 
-      // Категория.
+      // Category.
       var category = cell(row, 'category');
       if (problem === null && category === '') problem = 'category is empty';
 
-      // Числовые поля.
+      // Numeric fields.
       var base_salary = null, variable_pay = null, tenure_years = null, grade = null;
       var fte = DEFAULTS.fte, months_worked = DEFAULTS.months_worked;
 
@@ -396,7 +398,7 @@ var CSV = (function () {
       }
 
       if (problem === null) {
-        // Пустая ячейка variable_pay = 0. Это нормально и не предупреждение.
+        // An empty variable_pay cell means 0. That is normal, not a warning.
         var varRaw = cell(row, 'variable_pay');
         if (varRaw === '') variable_pay = 0;
         else {
@@ -426,11 +428,11 @@ var CSV = (function () {
             ? 'grade is empty'
             : 'grade value "' + gradeRaw + '" is not a number';
         } else {
-          grade = Math.round(grade); // грейд — порядковый целый уровень
+          grade = Math.round(grade); // grade is an ordinal integer level
         }
       }
 
-      // fte: пусто → дефолт 1.0 (молча, но со сводкой в warnings).
+      // fte: empty → default 1.0 (silently, but summarised in warnings).
       if (problem === null) {
         var fteRaw = cell(row, 'fte');
         if (fteRaw === '') { fte = DEFAULTS.fte; defaultsUsed.fte++; }
@@ -441,7 +443,7 @@ var CSV = (function () {
         }
       }
 
-      // months_worked: пусто → дефолт 12.
+      // months_worked: empty → default 12.
       if (problem === null) {
         var mwRaw = cell(row, 'months_worked');
         if (mwRaw === '') { months_worked = DEFAULTS.months_worked; defaultsUsed.months_worked++; }
@@ -459,13 +461,13 @@ var CSV = (function () {
         continue;
       }
 
-      // id: из колонки либо сгенерированный.
+      // id: from the column, or generated.
       var id = hasIdColumn ? cell(row, 'id') : '';
       if (id === '') {
         do { autoIdCounter++; id = makeId(autoIdCounter); } while (idSeen[id]);
       }
       if (idSeen[id]) {
-        // Дубликат id не повод терять строку: делаем уникальным и считаем в сводке.
+        // A duplicate id is no reason to lose the row: make it unique and count it.
         duplicateIdCount++;
         var suffix = 2;
         while (idSeen[id + '-' + suffix]) suffix++;
@@ -488,7 +490,7 @@ var CSV = (function () {
       });
     }
 
-    // --- Сводки в warnings ---
+    // --- Summaries in warnings ---
     if (defaultsUsed.fte > 0) {
       warnings.push(defaultsUsed.fte + ' ' + rowWord(defaultsUsed.fte) + ' had no fte, assumed 1.0.');
     }
@@ -501,7 +503,7 @@ var CSV = (function () {
         ' had a duplicate id; a suffix was added to keep every id unique.');
     }
 
-    // --- Устойчивость: доля испорченных строк ---
+    // --- Robustness: share of broken rows ---
     var badShare = dataRowCount > 0 ? badRows.length / dataRowCount : 0;
     if (badRows.length > 0 && badShare > MAX_BAD_ROW_SHARE) {
       var pct = Math.round(badShare * 100);
@@ -515,7 +517,7 @@ var CSV = (function () {
       return fail();
     }
 
-    // Проблемные строки, которых немного, — предупреждения с номерами строк.
+    // A small number of problem rows becomes warnings carrying the line numbers.
     if (badRows.length > 0) {
       warnings.push(badRows.length + ' ' + rowWord(badRows.length) +
         (badRows.length === 1 ? ' was' : ' were') + ' skipped because of unreadable values.');
@@ -528,7 +530,7 @@ var CSV = (function () {
       return fail();
     }
 
-    // Расчёт разрыва невозможен без обоих полов.
+    // A gap cannot be computed without both genders.
     if (genderSeen.F === 0 || genderSeen.M === 0) {
       var have = genderSeen.F > 0 ? 'F' : 'M';
       errors.push(
@@ -541,12 +543,12 @@ var CSV = (function () {
     return { ok: true, employees: employees, errors: [], warnings: warnings };
   }
 
-  // --- Необязательный хелпер для браузера ----------------------------------
+  // --- Optional browser helper ---------------------------------------------
 
   /**
-   * Читает File из <input type="file"> и отдаёт ParseResult в колбэк.
-   * Единственное место, где часть C касается браузерного API. Сеть не трогается:
-   * FileReader читает локальный файл.
+   * Reads a File from <input type="file"> and hands a ParseResult to a callback.
+   * The only place where part C touches a browser API. No network is involved:
+   * FileReader reads a local file.
    */
   function readFile(file, callback) {
     if (typeof FileReader === 'undefined') {
@@ -566,7 +568,7 @@ var CSV = (function () {
     readFile: readFile,
     REQUIRED_COLUMNS: REQUIRED.slice(),
     DEFAULTS: { fte: DEFAULTS.fte, months_worked: DEFAULTS.months_worked },
-    // Открыто для тестов и листа Method; UI сюда не обязан лезть.
+    // Exposed for tests and the Method section; the UI need not reach in here.
     _internals: {
       normaliseHeader: normaliseHeader,
       canonicalHeader: canonicalHeader,
@@ -578,6 +580,6 @@ var CSV = (function () {
   };
 })();
 
-// Экспорт для Node — только чтобы прогонять тесты вне браузера.
-// В собранной странице этой ветки не существует: typeof module === 'undefined'.
+// Export for Node — only so the tests can run outside a browser.
+// In the built page this branch does not exist: typeof module === 'undefined'.
 if (typeof module !== 'undefined' && module.exports) module.exports = CSV;

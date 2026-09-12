@@ -1,15 +1,15 @@
-/* Замер фактического кегля SVG-подписей на телефоне.
+/* Measures the actual rendered size of SVG labels on a phone.
  *
- * SVG задан в единицах viewBox и масштабируется под ширину контейнера.
- * На узком экране 14px внутри viewBox превращаются в реальные 5-6px —
- * автопроверки этого не видят, потому что в разметке кегль не менялся.
+ * The SVG is defined in viewBox units and scales to the container width.
+ * On a narrow screen 14px inside the viewBox becomes a real 5-6px — automated
+ * checks miss this, because nothing in the markup changed the size.
  */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
-const PAGE = 'file:///' + path.resolve(__dirname, '..', 'pay-gap-calculator.html')
+const PAGE = 'file:///' + path.resolve(__dirname, '..', 'index.html')
   .split(path.sep).join('/');
-const MIN_PX = 11;   // ниже этого подпись на телефоне нечитаема
+const MIN_PX = 11;   // below this a label is unreadable on a phone
 
 (async () => {
   const b = await puppeteer.launch({

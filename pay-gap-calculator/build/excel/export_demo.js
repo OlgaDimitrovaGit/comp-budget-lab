@@ -1,5 +1,5 @@
-/* Выгрузка демо-данных в CSV для Excel-модели.
- * PRNG воспроизвести формулами Excel нельзя — массив фиксируется здесь. */
+/* Exports the demo data to CSV for the Excel model.
+ * A PRNG cannot be reproduced by Excel formulas, so the array is fixed here. */
 const CALC = require('../calc.js');
 const fs = require('fs');
 

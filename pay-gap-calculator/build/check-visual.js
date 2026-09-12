@@ -1,20 +1,20 @@
-/* Снимок собранной страницы в реальном браузере: обе темы, десктоп и телефон.
+/* Screenshots of the built page in a real browser: both themes, desktop and phone.
  *
- * jsdom не показывает масштаб и не рисует SVG — обрезанные подписи и невидимая
- * стрелка в прошлый раз прошли мимо всех автопроверок. Здесь настоящий Chrome.
+ * jsdom shows no scale and draws no SVG — clipped labels and an invisible arrow
+ * once slipped past every automated check. This uses a real Chrome.
  *
- * Заодно снимает числа со страницы для сверки с Excel-моделью: это ответ на
- * число из работающей страницы не то же самое, что
- * число из calc.js в Node.
+ * It also reads the numbers off the page to reconcile them with the Excel model:
+ * a number from the working page is not the same thing as a number from calc.js
+ * in Node.
  *
- * Запуск: node build/check-visual.js
+ * Run: node build/check-visual.js
  */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const PAGE = 'file:///' + path.resolve(__dirname, '..', 'pay-gap-calculator.html')
+const PAGE = 'file:///' + path.resolve(__dirname, '..', 'index.html')
   .replace(/\\/g, '/');
 const OUT = path.resolve(__dirname, 'shots');
 
@@ -42,7 +42,7 @@ const THEMES = ['light', 'dark'];
       page.on('console', m => {
         if (m.type() === 'error') errors.push('console: ' + m.text());
       });
-      // сетевые вызовы наружу — правило проекта, ноль
+      // outbound network calls — the rule is zero
       const external = [];
       page.on('request', r => {
         const u = r.url();
@@ -61,14 +61,14 @@ const THEMES = ['light', 'dark'];
 
       const tag = `${view.name}-${theme}`;
 
-      // числа со страницы — то, что реально видит человек
+      // numbers from the page — what a person actually sees
       const data = await page.evaluate(() => {
         const txt = el => (el ? el.textContent.trim() : null);
         const nums = Array.from(document.querySelectorAll('body *'))
           .filter(el => !el.children.length && /€[\d\s,.]+/.test(el.textContent))
           .map(el => el.textContent.trim());
         const svg = document.querySelector('svg');
-        // подписи, вылезающие за границы своего SVG
+        // labels spilling outside their own SVG
         let clipped = [];
         if (svg) {
           const box = svg.getBoundingClientRect();
@@ -95,7 +95,7 @@ const THEMES = ['light', 'dark'];
       await page.screenshot({
         path: path.join(OUT, `${tag}.png`), fullPage: true,
       });
-      // первый экран отдельно — критерий «три числа за три секунды»
+      // the first screen on its own — the "three numbers in three seconds" test
       await page.screenshot({
         path: path.join(OUT, `${tag}-fold.png`), fullPage: false,
       });

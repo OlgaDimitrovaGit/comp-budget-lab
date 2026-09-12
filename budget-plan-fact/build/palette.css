@@ -1,0 +1,130 @@
+/* The palette this dashboard is built with.
+ *
+ * Extracted from the working palette file, comments stripped: those are
+ * maintenance notes addressed to whoever keeps the palette, not part of the
+ * artefact. This copy is what the build reads, so the page can be rebuilt from
+ * this repository alone.
+ */
+:root {
+  --bg:          #f7f9fb;
+  --bg-panel:    #ffffff;
+  --bg-raised:   #ffffff;
+  --bg-sunk:     #eef2f6;
+  --line:        #dde3ea;
+  --line-soft:   #e9eef3;
+
+  --ink:         #1a1a18;
+  --ink-mid:     #4d4c48;
+  --ink-soft:    #78766f;
+  --ink-faint:   #6f6d67;
+
+  --warn:        #6f6d67;
+  --warn-bg:     #eef2f6;
+
+  --err:         #c1121f;
+  --err-bg:      #fef2f2;
+  --ok:          #1f5d3a;
+  --ok-bg:       #e5f2ea;
+
+  --shadow:        0 1px 2px rgba(26, 26, 24, .05);
+  --shadow-raised: 0 1px 2px rgba(26, 26, 24, .06),
+                   0 8px 24px -12px rgba(26, 26, 24, .18);
+
+  --mono:  ui-monospace, "SFMono-Regular", "Menlo", "Consolas",
+           "Liberation Mono", monospace;
+  --sans:  -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+           Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+           Georgia, serif;
+
+  --s-gap:       #2a78d6;
+  --s-rev:       #c0417c;
+  --s-thresh:    #8a5a10;
+
+  --accent:      #2563c9;
+  --accent-lift: #3b74d6;
+  --accent-soft: #e8eefb;
+  --clay:        #d95926;
+  --clay-soft:   #fbeae2;
+  --moss:        #199e70;
+  --moss-soft:   #eaf7f2;
+  --focus:       #2563c9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:          #14161a;
+    --bg-panel:    #1b1e23;
+    --bg-raised:   #21242a;
+    --bg-sunk:     #101216;
+    --line:        #33373e;
+    --line-soft:   #2a2e34;
+
+    --ink:         #e9e7e2;
+    --ink-mid:     #b8b5ae;
+    --ink-soft:    #8d8a83;
+    --ink-faint:   #8d8a83;
+
+    --warn:        #b8b5ae;
+    --warn-bg:     #101216;
+    --err:         #f87171;
+    --err-bg:      #341c1e;
+    --ok:          #8fd0a8;
+    --ok-bg:       #172b20;
+
+    --s-gap:       #4590e2;
+    --s-rev:       #d16b9a;
+    --s-thresh:    #b8861f;
+
+    --accent:      #4a9be0;
+    --accent-lift: #6bb0e8;
+    --accent-soft: #12242f;
+    --clay:        #d95926;
+    --clay-soft:   #33201a;
+    --moss:        #1baf7a;
+    --moss-soft:   #10291f;
+    --focus:       #4a9be0;
+
+    --shadow:        0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-raised: 0 1px 2px rgba(0, 0, 0, .4),
+                     0 8px 24px -12px rgba(0, 0, 0, .7);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:          #14161a;
+  --bg-panel:    #1b1e23;
+  --bg-raised:   #21242a;
+  --bg-sunk:     #101216;
+  --line:        #33373e;
+  --line-soft:   #2a2e34;
+
+  --ink:         #e9e7e2;
+  --ink-mid:     #b8b5ae;
+  --ink-soft:    #8d8a83;
+  --ink-faint:   #8d8a83;
+
+  --warn:        #b8b5ae;
+  --warn-bg:     #101216;
+  --err:         #f87171;
+  --err-bg:      #341c1e;
+  --ok:          #8fd0a8;
+  --ok-bg:       #172b20;
+
+  --s-gap:       #4590e2;
+  --s-rev:       #d16b9a;
+  --s-thresh:    #b8861f;
+
+  --accent:      #4a9be0;
+  --accent-lift: #6bb0e8;
+  --accent-soft: #12242f;
+  --clay:        #d95926;
+  --clay-soft:   #33201a;
+  --moss:        #1baf7a;
+  --moss-soft:   #10291f;
+  --focus:       #4a9be0;
+
+  --shadow:        0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, .4),
+                   0 8px 24px -12px rgba(0, 0, 0, .7);
+}

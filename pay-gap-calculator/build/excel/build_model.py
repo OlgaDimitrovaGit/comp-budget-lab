@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-Сборка Excel-модели pay-gap калькулятора (шаг 3 по SPEC §8).
+Builds the Excel model of the pay-gap calculator.
 
-Читает CSV той же формы, что и калькулятор, и строит .xlsx, в котором вся
-денежная цепочка живая: нормализация -> разрывы -> регрессия (LINEST) ->
-отбор адресатов -> распределение прибавки -> взносы -> итоги.
+Reads a CSV of the same shape as the calculator and produces an .xlsx in which
+the whole money chain is live: normalisation -> gaps -> regression -> selection
+of recipients -> distribution of the uplift -> contributions -> totals.
 
-Из Python приходят только исходные данные. Ни одна сумма не вписывается
-числом: всё, что можно пересчитать, пересчитывается формулой Excel.
+Python supplies only the source data. Not one total is written in as a number:
+anything that can be recomputed is recomputed by an Excel formula.
 
-Соответствие calc.js:
-  normalise()        -> лист Data, колонки J..N
-  regress()          -> лист Categories, LINEST + guard-условия
-  computeGaps()      -> лист Categories
-  runScenario()      -> лист Data (адресаты) + лист Categories (суммы)
-  contributionsOn()  -> лист Data, колонки взносов
-  totalsBlock()      -> лист Summary
+Correspondence with calc.js:
+  normalise()        -> Data sheet, columns J..N
+  regress()          -> Categories sheet, explicit sums + guard conditions
+  computeGaps()      -> Categories sheet
+  runScenario()      -> Data sheet (recipients) + Categories sheet (totals)
+  contributionsOn()  -> Data sheet, contribution columns
+  totalsBlock()      -> Summary sheet
 """
 import csv
 import sys
@@ -26,7 +26,7 @@ from openpyxl.comments import Comment
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
 
-# --- Настройки по умолчанию: DEFAULT_SETTINGS в calc.js ---------------------
+# --- Defaults: DEFAULT_SETTINGS in calc.js ----------------------------------
 DEFAULTS = {
     "threshold_pct": 5,
     "implementation_month": 7,
@@ -35,12 +35,12 @@ DEFAULTS = {
     "ceiling": 61214,
 }
 
-# --- Оформление ------------------------------------------------------------
+# --- Styling ----------------------------------------------------------------
 H_FILL = PatternFill("solid", fgColor="1F3B57")
 H_FONT = Font(color="FFFFFF", bold=True, size=10)
-IN_FILL = PatternFill("solid", fgColor="FFF4D6")    # исходные данные
-CALC_FILL = PatternFill("solid", fgColor="EAF3FA")  # расчёт формулой
-SET_FILL = PatternFill("solid", fgColor="E6F4EA")   # настройка, можно менять
+IN_FILL = PatternFill("solid", fgColor="FFF4D6")    # source data
+CALC_FILL = PatternFill("solid", fgColor="EAF3FA")  # computed by formula
+SET_FILL = PatternFill("solid", fgColor="E6F4EA")   # a setting, meant to be changed
 TITLE = Font(bold=True, size=13)
 BOLD = Font(bold=True)
 MUTED = Font(color="6B7280", size=9)
@@ -88,7 +88,7 @@ def build(csv_path, out_path, title_note):
     emp = read_csv(csv_path)
     n = len(emp)
 
-    # порядок категорий — первого появления, как в analyse()
+    # category order is order of first appearance, as in analyse()
     order, seen = [], set()
     for e in emp:
         if e["category"] not in seen:
@@ -98,7 +98,7 @@ def build(csv_path, out_path, title_note):
     wb = Workbook()
 
     # ======================================================================
-    # ЛИСТ Settings
+    # SHEET Settings
     # ======================================================================
     st = wb.active
     st.title = "Settings"
@@ -147,7 +147,7 @@ def build(csv_path, out_path, title_note):
     st.merge_cells("A15:D17")
 
     # ======================================================================
-    # ЛИСТ Data
+    # SHEET Data
     # ======================================================================
     ws = wb.create_sheet("Data")
     ws["A1"] = "Employee-level data and calculation"
@@ -176,8 +176,8 @@ def build(csv_path, out_path, title_note):
                            10, 8, 10, 8])
     ws.freeze_panes = "A%d" % (HDR + 1)
 
-    # единицы измерения — примечаниями к заголовкам, а не в самих названиях:
-    # длинные подписи в шапке загромождают таблицу
+    # units go in comments on the header cells rather than in the names
+    # themselves: long labels in the header clutter the table
     notes = {
         4: "EUR, actually paid for the period. Not annualised.",
         5: "EUR, actually paid for the period. Recorded on the same basis as base "
@@ -202,16 +202,16 @@ def build(csv_path, out_path, title_note):
 
     first, last = HDR + 1, HDR + n
 
-    # строки категорий на листе Categories (заголовок там в строке CHDR_CAT)
+    # category rows on the Categories sheet (its header is on row CHDR_CAT)
     CHDR_CAT = 4
     CFIRST = CHDR_CAT + 1
     CLAST = CFIRST + len(order) - 1
 
     def cat_lookup(col, row):
-        """Значение из колонки col листа Categories для категории строки row.
+        """Value from column col of the Categories sheet for the category on row.
 
-        Поиск по имени категории, а не по номеру строки: SUMIFS возвращает
-        единственное совпадение, потому что имена категорий уникальны.
+        Looked up by category name rather than by row number: SUMIFS returns a
+        single match because category names are unique.
         """
         return ("SUMIFS(Categories!${c}${f}:${c}${l},Categories!$A${f}:$A${l},B{r})"
                 .format(c=col, f=CFIRST, l=CLAST, r=row))
@@ -237,18 +237,18 @@ def build(csv_path, out_path, title_note):
                 c.number_format = fmt
             return c
 
-        # --- нормализация: normalise() ---
+        # --- normalisation: normalise() ---
         put(10, "=H{r}*(I{r}/12)".format(r=r), NUM)      # factor
         put(11, "=D{r}/J{r}".format(r=r), EUR)           # n_base
         put(12, "=E{r}/J{r}".format(r=r), EUR)           # n_var
         put(13, "=K{r}+L{r}".format(r=r), EUR)           # n_total
         put(14, "=D{r}+E{r}".format(r=r), EUR)           # actual_total
 
-        # медиана категории (оба пола), без формул массива.
-        # SUMPRODUCT считает ранг строки внутри её категории по n_total, а
-        # медиана собирается из одного (нечётное n) или двух (чётное) средних
-        # значений через SUMIFS по этому рангу. Обычные формулы, Ctrl+Shift+Enter
-        # не нужен ни в одной версии Excel.
+        # median of the category (both genders), without array formulas.
+        # SUMPRODUCT computes the row's rank within its category by n_total, and
+        # the median is assembled from one (odd n) or two (even n) middle values
+        # via SUMIFS on that rank. Ordinary formulas: no Ctrl+Shift+Enter is
+        # needed in any version of Excel.
         rank = ("SUMPRODUCT(($B${f}:$B${l}=B{r})*($M${f}:$M${l}<M{r}))+1"
                 .format(f=first, l=last, r=r))
         put(15, ("=(SUMIFS($M${f}:$M${l},$B${f}:$B${l},B{r},$AD${f}:$AD${l},"
@@ -256,10 +256,10 @@ def build(csv_path, out_path, title_note):
                  "$AD${f}:$AD${l},INT(AE{r}/2)+1))/2").format(
             f=first, l=last, r=r), EUR)
 
-        # --- сценарий minimum ---
-        # Значения с листа Categories берутся поиском по имени категории
-        # (SUMIFS по колонке A), а не ссылкой на конкретную строку: строка
-        # категории может сдвинуться, имя — нет.
+        # --- minimum scenario ---
+        # Values from the Categories sheet are looked up by category name
+        # (SUMIFS on column A) rather than by a reference to a specific row: the
+        # category's row can move, its name cannot.
         put(16, '=IF(AND(C{r}="F",M{r}<O{r},{corr}=1),1,0)'.format(
             r=r, corr=cat_lookup("Z", r)))
         put(17, "=IF(P{r}=1,O{r}-M{r},0)".format(r=r), EUR)
@@ -272,7 +272,7 @@ def build(csv_path, out_path, title_note):
                  "+(rate_above/100)*(T{r}-MIN(T{r},MAX(0,ceiling-D{r}))))").format(r=r), EUR)
         put(22, "=T{r}+U{r}".format(r=r), EUR)
 
-        # --- сценарий full ---
+        # --- full scenario ---
         put(23, '=IF(AND(C{r}="F",M{r}<O{r},{corr}=1),1,0)'.format(
             r=r, corr=cat_lookup("AH", r)))
         put(24, "=IF(W{r}=1,O{r}-M{r},0)".format(r=r), EUR)
@@ -285,29 +285,29 @@ def build(csv_path, out_path, title_note):
                  "+(rate_above/100)*(AA{r}-MIN(AA{r},MAX(0,ceiling-D{r}))))").format(r=r), EUR)
         put(29, "=AA{r}+AB{r}".format(r=r), EUR)
 
-        # --- служебные колонки для немассивной медианы ---
-        # AD: ранг строки по n_total внутри своей категории (1 = самый низкий).
-        # Второе слагаемое разрывает ничьи по номеру строки: при равных n_total
-        # ранги всё равно различаются, иначе SUMIFS по рангу вернул бы сумму
-        # двух строк вместо одной и медиана оказалась бы вдвое больше.
+        # --- helper columns for the non-array median ---
+        # AD: the row's rank by n_total within its own category (1 = lowest).
+        # The second term breaks ties by row number: with equal n_total the ranks
+        # still differ, otherwise SUMIFS on rank would return the sum of two rows
+        # instead of one and the median would come out twice too large.
         put(30, ("=SUMPRODUCT(($B${f}:$B${l}=B{r})*($M${f}:$M${l}<M{r}))"
                  "+SUMPRODUCT(($B${f}:$B${l}=B{r})*($M${f}:$M${l}=M{r})"
                  "*(ROW($M${f}:$M${l})<ROW(M{r})))+1"
                  ).format(f=first, l=last, r=r))
-        # AE: размер категории
+        # AE: size of the category
         put(31, "=COUNTIF($B${f}:$B${l},B{r})".format(f=first, l=last, r=r))
-        # AF: ранг внутри пары «категория + пол» — для медиан по полу
+        # AF: rank within the "category + gender" pair — for medians by gender
         put(32, ("=SUMPRODUCT(($B${f}:$B${l}=B{r})*($C${f}:$C${l}=C{r})"
                  "*($M${f}:$M${l}<M{r}))"
                  "+SUMPRODUCT(($B${f}:$B${l}=B{r})*($C${f}:$C${l}=C{r})"
                  "*($M${f}:$M${l}=M{r})*(ROW($M${f}:$M${l})<ROW(M{r})))+1"
                  ).format(f=first, l=last, r=r))
-        # AG: размер группы «категория + пол»
+        # AG: size of the "category + gender" group
         put(33, "=COUNTIFS($B${f}:$B${l},B{r},$C${f}:$C${l},C{r})".format(
             f=first, l=last, r=r))
 
     # ======================================================================
-    # ЛИСТ Categories
+    # SHEET Categories
     # ======================================================================
     cs = wb.create_sheet("Categories")
     cs["A1"] = "Category-level calculation"
@@ -334,11 +334,11 @@ def build(csv_path, out_path, title_note):
         "adjust_full", "contrib_full", "cost_full", "recip_full",       # AK-AN
         "unexpl_after_full",                                            # AO
         "unreliable", "reverse_gap",                                    # AP-AQ
-    ] + [""] * 9 + [                                                    # AR-AZ пусто
+    ] + [""] * 9 + [                                                    # AR-AZ empty
         "n", "Sum_g", "Sum_t", "Sum_y", "Sum_gg", "Sum_tt",             # BA-BF
         "Sum_gt", "Sum_gy", "Sum_ty", "Sum_yy", "det",                  # BG-BK
     ]
-    CHDR = CHDR_CAT   # одна и та же величина: Data ссылается на эту разметку
+    CHDR = CHDR_CAT   # the same value: Data references this layout
     header(cs, CHDR, ccols, [18, 10, 7, 7] + [12] * (len(ccols) - 4))
     cs.freeze_panes = "B%d" % (CHDR + 1)
 
@@ -347,7 +347,7 @@ def build(csv_path, out_path, title_note):
     def rng(col):
         return "%s$%s$%d:$%s$%d" % (D, col, first, col, last)
 
-    B, G_ = rng("B"), rng("C")          # категория, пол
+    B, G_ = rng("B"), rng("C")          # category, gender
     M_, K_, L_ = rng("M"), rng("K"), rng("L")   # n_total, n_base, n_var
     GR, TE = rng("G"), rng("F")         # grade, tenure
 
@@ -375,15 +375,16 @@ def build(csv_path, out_path, title_note):
             r=r, m=M_, b=B, c=cf, g=G_), EUR)
         put(6, '=IF(C{r}=0,0,AVERAGEIFS({m},{b},{c},{g},"F"))'.format(
             r=r, m=M_, b=B, c=cf, g=G_), EUR)
-        # медиана всей категории — берём готовую из Data (там уже посчитана
-        # немассивной формулой, у всех строк категории она одинаковая)
+        # median of the whole category — taken ready-made from Data (already
+        # computed there by a non-array formula, and identical on every row of
+        # the category)
         put(7, "=IF(B{r}=0,0,SUMIFS({o},{b},{c},{ad},1))".format(
             r=r, o=rng("O"), b=B, c=cf, ad=rng("AD")), EUR)
         put(8, "=IF(OR(E{r}<=0,C{r}=0,D{r}=0),0,(E{r}-F{r})/E{r}*100)".format(r=r), PCT)
 
-        # медианы по полу — через ранг внутри группы «категория + пол» (Data!AF).
-        # При чётном размере группы берутся два средних значения, при нечётном
-        # обе половины формулы указывают на одну и ту же строку.
+        # medians by gender — via the rank within the "category + gender" group
+        # (Data!AF). With an even group size two middle values are taken; with an
+        # odd one both halves of the formula point at the same row.
         def med_by_sex(sex, cnt_cell):
             return ('=IF({cnt}=0,0,(SUMIFS({m},{b},{c},{g},"{s}",{af},'
                     'INT(({cnt}+1)/2))+SUMIFS({m},{b},{c},{g},"{s}",{af},'
@@ -406,8 +407,8 @@ def build(csv_path, out_path, title_note):
             r=r, k=K_, b=B, c=cf, g=G_), EUR)
         put(17, "=IF(OR(O{r}<=0,C{r}=0,D{r}=0),0,(O{r}-P{r})/O{r}*100)".format(r=r), PCT)
 
-        # --- регрессия: guard как в regress() ---
-        # дисперсия предиктора через Var = E[x^2] - (E[x])^2 — немассивно
+        # --- regression: the same guard as in regress() ---
+        # predictor variance via Var = E[x^2] - (E[x])^2, without array formulas
         put(18, ("=IF(B{r}<2,0,SUMPRODUCT(({b}={c})*{g}*{g})/B{r}"
                  "-(SUMIFS({g},{b},{c})/B{r})^2)").format(
             r=r, b=B, c=cf, g=GR), NUM)
@@ -416,17 +417,18 @@ def build(csv_path, out_path, title_note):
             r=r, b=B, c=cf, t=TE), NUM)
         put(20, "=IF(AND(B{r}>=4,R{r}>0.000000001,S{r}>0.000000001),1,0)".format(r=r))
 
-        # --- OLS без LINEST: нормальные уравнения 3x3, решение по Крамеру ---
-        # Сначала суммы (колонки BA..BI ниже), затем центрированные моменты:
+        # --- OLS without LINEST: 3x3 normal equations solved by Cramer's rule ---
+        # First the sums (columns BA..BI below), then the centred moments:
         #   Sgg = Σg² - (Σg)²/n     Sgt = Σgt - Σg·Σt/n
         #   Stt = Σt² - (Σt)²/n     Sgy = Σgy - Σg·Σy/n     Sty = Σty - Σt·Σy/n
-        # Определитель системы 2x2 (после исключения свободного члена):
+        # Determinant of the 2x2 system (after eliminating the intercept):
         #   det = Sgg·Stt - Sgt²
         #   coef_grade  = (Sgy·Stt - Sty·Sgt) / det
         #   coef_tenure = (Sty·Sgg - Sgy·Sgt) / det
-        # Это ровно то, что solveGauss() считает методом Гаусса, но выписанное
-        # явно — в 3x3 правило Крамера короче и целиком видно в ячейке.
-        # служебные суммы, строго по колонкам BA(53)..BJ(62)
+        # This is exactly what solveGauss() computes by Gaussian elimination, but
+        # written out explicitly: at 3x3 Cramer's rule is shorter and fits
+        # visibly inside a single cell.
+        # helper sums, strictly in columns BA(53)..BJ(62)
         sums = [
             ("BA", "=B{r}".format(r=r)),                                        # n
             ("BB", "=SUMIFS({g},{b},{c})".format(g=GR, b=B, c=cf)),             # Σg
@@ -449,18 +451,18 @@ def build(csv_path, out_path, title_note):
         Syy = "(BJ{r}-BD{r}^2/B{r})".format(r=r)
         det = "({gg}*{tt}-{gt}^2)".format(gg=Sgg, tt=Stt, gt=Sgt)
 
-        # BK: определитель — вынесен отдельно, чтобы guard мог его проверить
+        # BK: the determinant, kept separate so the guard can check it
         put(63, "=IF(T{r}=0,0,{det})".format(r=r, det=det), NUM)
         put(21, "=IF(OR(T{r}=0,ABS(BK{r})<0.000000001),0,({gy}*{tt}-{ty}*{gt})/BK{r})".format(
             r=r, gy=Sgy, tt=Stt, ty=Sty, gt=Sgt), EUR)
         put(22, "=IF(OR(T{r}=0,ABS(BK{r})<0.000000001),0,({ty}*{gg}-{gy}*{gt})/BK{r})".format(
             r=r, ty=Sty, gg=Sgg, gy=Sgy, gt=Sgt), EUR)
-        # R² = (coef_grade·Sgy + coef_tenure·Sty) / Syy — доля объяснённой дисперсии
+        # R2 = (coef_grade*Sgy + coef_tenure*Sty) / Syy — share of variance explained
         put(23, ('=IF(OR(T{r}=0,ABS(BK{r})<0.000000001,{yy}<0.000000001),"",'
                  '(U{r}*{gy}+V{r}*{ty})/{yy})').format(
             r=r, yy=Syy, gy=Sgy, ty=Sty), NUM)
 
-        # explained: coef_grade * dGrade + coef_tenure * dTenure, в % к mean_M
+        # explained: coef_grade * dGrade + coef_tenure * dTenure, as % of mean_M
         dg = ('(IF(D{r}=0,0,AVERAGEIFS({g},{b},{c},{gd},"M"))'
               '-IF(C{r}=0,0,AVERAGEIFS({g},{b},{c},{gd},"F")))').format(
             r=r, g=GR, b=B, c=cf, gd=G_)
@@ -473,7 +475,7 @@ def build(csv_path, out_path, title_note):
             r=r, e=raw_expl), PCT)
         put(25, "=H{r}-X{r}".format(r=r), PCT)
 
-        # --- сценарий minimum ---
+        # --- minimum scenario ---
         put(26, "=IF(AND(H{r}>=0,Y{r}>threshold_pct),1,0)".format(r=r))
         put(27, "=IF(Z{r}=0,0,SUMIFS({q},{b},{c}))".format(
             r=r, q="%s$Q$%d:$Q$%d" % (D, first, last), b=B, c=cf), EUR)
@@ -490,7 +492,7 @@ def build(csv_path, out_path, title_note):
             r=r, m=M_, b=B, c=cf, g=G_, s="%s$S$%d:$S$%d" % (D, first, last))
         put(33, "=IF(E{r}<=0,0,(E{r}-{nf})/E{r}*100-X{r})".format(r=r, nf=new_f), PCT)
 
-        # --- сценарий full: цель 0 ---
+        # --- full scenario: target 0 ---
         put(34, "=IF(AND(H{r}>=0,Y{r}>0),1,0)".format(r=r))
         put(35, "=IF(AH{r}=0,0,SUMIFS({x},{b},{c}))".format(
             r=r, x="%s$X$%d:$X$%d" % (D, first, last), b=B, c=cf), EUR)
@@ -513,7 +515,7 @@ def build(csv_path, out_path, title_note):
     clast = CHDR + len(order)
 
     # ======================================================================
-    # ЛИСТ Summary
+    # SHEET Summary
     # ======================================================================
     sm = wb.create_sheet("Summary")
     sm["A1"] = "Totals"
@@ -537,12 +539,12 @@ def build(csv_path, out_path, title_note):
 
     SHDR = 7
     header(sm, SHDR, ["Metric", "Minimum compliance", "Full equalisation", "Difference"])
-    # номера строк вычисляются от SHDR, а не вписываются константами:
-    # раньше они разъехались с фактической разметкой и «Итого» ссылалось само
-    # на себя, давая циклическую ссылку и пустую ячейку
-    R_ADJ = SHDR + 1        # корректировка ФОТ
-    R_CON = SHDR + 2        # взносы
-    R_TOT = SHDR + 3        # итого
+    # row numbers are derived from SHDR rather than written in as constants:
+    # they once drifted from the actual layout and "Total" ended up referring to
+    # itself, producing a circular reference and an empty cell
+    R_ADJ = SHDR + 1        # payroll adjustment
+    R_CON = SHDR + 2        # contributions
+    R_TOT = SHDR + 3        # total
     TOTAL_LABEL = "Total"
     lines = [
         ("Pay adjustment", "=SUM(Categories!$AC${f}:$AC${l})",
@@ -581,7 +583,7 @@ def build(csv_path, out_path, title_note):
         if label == TOTAL_LABEL:
             d.font = BOLD
 
-    # строки ниже таблицы — от её фактического конца, не константами
+    # rows below the table are placed from its actual end, not by constants
     r_note = SHDR + len(lines) + 2
     sm.cell(row=r_note, column=1, value="Reconciliation with the calculator").font = BOLD
     note_cell = sm.cell(row=r_note + 1, column=1, value=(
@@ -594,7 +596,7 @@ def build(csv_path, out_path, title_note):
                    end_row=r_note + 2, end_column=4)
 
     # ======================================================================
-    # ЛИСТ Legend
+    # SHEET Legend
     # ======================================================================
     lg = wb.create_sheet("Legend")
     lg["A1"] = "Legend and method"
@@ -709,6 +711,6 @@ def build(csv_path, out_path, title_note):
 if __name__ == "__main__":
     src = sys.argv[1] if len(sys.argv) > 1 else "build/sample.csv"
     dst = sys.argv[2] if len(sys.argv) > 2 else "build/excel/pay-gap-model-mini.xlsx"
-    note = sys.argv[3] if len(sys.argv) > 3 else "Мини-версия на демо-фикстуре (10 строк)"
+    note = sys.argv[3] if len(sys.argv) > 3 else "Mini version on the demo fixture (10 rows)"
     rows, cats = build(src, dst, note)
-    print("OK: %s  (%d strok, %d kategoriy)" % (dst, rows, cats))
+    print("OK: %s  (%d rows, %d categories)" % (dst, rows, cats))

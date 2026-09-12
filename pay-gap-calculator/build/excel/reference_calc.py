@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Независимый эталон: портирование calc.js на Python.
+An independent reference: calc.js ported to Python.
 
-Нужен, чтобы проверять Excel-модель не «на глаз», а сверкой с числами.
-Логика повторяет build/calc.js буквально; расхождение эталона с Excel
-означает ошибку в формулах, расхождение эталона с калькулятором —
-ошибку портирования.
+It exists so the Excel model can be checked against numbers rather than by eye.
+The logic follows build/calc.js literally; a mismatch between this reference and
+Excel means an error in the formulas, and a mismatch between this reference and
+the calculator means an error in the port.
 """
 import csv
 import statistics
@@ -48,7 +48,7 @@ def load(path):
 
 
 def regress(rows):
-    """OLS n_total ~ grade + tenure. Возвращает (coef_grade, coef_tenure, r2, ok)."""
+    """OLS n_total ~ grade + tenure. Returns (coef_grade, coef_tenure, r2, ok)."""
     n = len(rows)
     if n < 4:
         return 0.0, 0.0, None, False
@@ -168,7 +168,7 @@ def analyse(emp, S=None):
 if __name__ == "__main__":
     src = sys.argv[1] if len(sys.argv) > 1 else "build/sample.csv"
     res = analyse(load(src))
-    print("Численность: %d   ФОТ: %.2f" % (res["headcount"], res["payroll"]))
+    print("Headcount: %d   Payroll: %.2f" % (res["headcount"], res["payroll"]))
     print()
     for c in res["categories"]:
         print("%-18s n=%d (F%d/M%d) med=%10.2f raw=%7.3f%% expl=%7.3f%% unexpl=%7.3f%% "
@@ -184,5 +184,5 @@ if __name__ == "__main__":
     print()
     for tag in ("min", "full"):
         t = res["totals"][tag]
-        print("ИТОГО %-5s adj=%10.2f contrib=%9.2f total=%10.2f (%.3f%% к фонду)" % (
+        print("TOTAL %-5s adj=%10.2f contrib=%9.2f total=%10.2f (%.3f%% of payroll)" % (
             tag, t["adjustment"], t["contributions"], t["total"], t["pct"]))

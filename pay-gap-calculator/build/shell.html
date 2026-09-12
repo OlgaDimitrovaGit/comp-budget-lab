@@ -25,21 +25,46 @@
 
   --bg:        #fbfaf8;
   --bg-panel:  #ffffff;
+  --bg-raised: #ffffff;   /* card on top of a card: in the light theme the
+                             layers are separated by shadow, not colour */
   --bg-sunk:   #f2f0ec;
   --ink:       #1a1a18;
   --ink-mid:   #4d4c48;
   --ink-soft:  #78766f;
+  --ink-faint: #8e8b83;   /* incidental detail: footnotes, dates. 3.26:1 on --bg */
   --line:      #ddd9d2;
   --line-soft: #e9e6e0;
-  --accent:    #1f4f6b;
-  --accent-soft:#e2edf3;
+
+  /* Interface accents: sea / clay / moss. Checked with the palette validator
+     against the #ffffff panel in all-pairs mode: CVD dE 9.4 (deutan), normal
+     vision 21.1, every contrast >= 3:1.
+     Clay and moss come from positioning but were recomputed: the originals
+     #a8593f / #4a6b4f failed the check (dE 2.2 under protanopia, and moss fell
+     below the chroma threshold and read as grey).
+     The accent keeps the page's existing sea character, lifted to passing
+     values: #1f4f6b sat darker than the lightness band (L 0.408 against 0.43)
+     and below the chroma threshold (C 0.07). Purple would separate further from
+     the gap colour, but it chills the warm paper ground. Do not pick by eye —
+     rerun the validator. */
+  --accent:    #00608a;
+  --accent-lift:#0a7099;  /* hover */
+  --accent-soft:#e4f1f7;
+  --clay:      #d95926;
+  --clay-soft: #fbeae2;
+  --moss:      #199e70;
+  --moss-soft: #eaf7f2;
+
   --warn:      #8a5a10;
   --warn-bg:   #fbf1de;
   --err:       #8e2a20;
   --err-bg:    #fbe9e6;
   --ok:        #1f5d3a;
   --ok-bg:     #e5f2ea;
-  --focus:     #1f4f6b;
+  --focus:     #00608a;
+
+  --shadow:        0 1px 2px rgba(26,26,24,.05);
+  --shadow-raised: 0 1px 2px rgba(26,26,24,.06),
+                   0 8px 24px -12px rgba(26,26,24,.18);
 
   /* Chart series colours. Validated as a set with the dataviz palette checker
      against the panel surface (#ffffff): worst adjacent pair deutan dE 11.7,
@@ -61,21 +86,40 @@
   :root {
     --bg:        #14161a;
     --bg-panel:  #1b1e23;
-    --bg-sunk:   #21242a;
+    --bg-raised: #21242a;   /* in the dark a layer reads by colour, not shadow */
+    --bg-sunk:   #101216;   /* an inset sits deeper than the panel, not above it */
     --ink:       #e9e7e2;
     --ink-mid:   #b8b5ae;
     --ink-soft:  #8d8a83;
+    --ink-faint: #6f6d67;
     --line:      #33373e;
     --line-soft: #2a2e34;
-    --accent:    #8fc2dd;
-    --accent-soft:#1e2f3a;
+
+    /* Accents, dark steps for the #1b1e23 panel (not lightened light ones):
+       CVD dE 9.3 (deutan), normal vision 18.3, every contrast >= 3:1.
+       The accent here is deliberately bluer than the light sea: a lightened sea
+       sat right next to the gap colour --s-gap (dE 3.2), and a link would have
+       been easy to mistake for a point on the chart. This step holds a distance
+       of 18.3. */
+    --accent:    #4a9be0;
+    --accent-lift:#6bb0e8;
+    --accent-soft:#12242f;
+    --clay:      #d95926;
+    --clay-soft: #33201a;
+    --moss:      #1baf7a;
+    --moss-soft: #10291f;
+
     --warn:      #e2b168;
     --warn-bg:   #33291a;
     --err:       #ef9d92;
     --err-bg:    #351f1c;
     --ok:        #8fd0a8;
     --ok-bg:     #172b20;
-    --focus:     #8fc2dd;
+    --focus:     #4a9be0;
+
+    --shadow:        0 1px 2px rgba(0,0,0,.4);
+    --shadow-raised: 0 1px 2px rgba(0,0,0,.4),
+                     0 8px 24px -12px rgba(0,0,0,.7);
 
     /* Dark steps are selected for the dark panel (#1b1e23), not flipped from
        light: blue vs violet collapses here (protan dE 1.9). Magenta holds.
@@ -107,6 +151,7 @@ body {
 }
 
 a { color: var(--accent); }
+a:hover { color: var(--accent-lift); }
 
 h1, h2, h3 { font-weight: 600; line-height: 1.25; margin: 0; letter-spacing: -0.01em; }
 h1 { font-size: 1.25rem; }
@@ -426,46 +471,16 @@ table.mini th, table.mini td { padding: 0.3rem 0.5rem; }
 .summary th.k { font-weight: 400; color: var(--ink-mid); white-space: normal; }
 .summary td.v { font-weight: 600; }
 
-/* ------------------------------------------------------------ self-check */
-.selfcheck {
-  display: flex;
-  gap: 0.55rem;
-  align-items: flex-start;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  font-size: 0.85rem;
-}
-/* `display: flex` outranks the hidden attribute, which left an empty green
-   frame on the page when the banner was hidden. */
-.selfcheck[hidden] { display: none; }
-.selfcheck .sc-dot {
-  width: 0.6rem; height: 0.6rem; border-radius: 50%;
-  flex: none; margin-top: 0.42rem;
-}
-.selfcheck.pass { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
-.selfcheck.pass .sc-dot { background: var(--ok); }
-.selfcheck.fail { background: var(--err-bg); border-color: var(--err); color: var(--err); }
-.selfcheck.fail .sc-dot { background: var(--err); }
-.selfcheck.pending { background: var(--bg-sunk); color: var(--ink-soft); }
-.selfcheck.pending .sc-dot { background: var(--ink-soft); }
-/* No section margin while the banner is hidden, or the layout keeps a gap
-   where nothing is drawn. :has() is unsupported in older browsers; there the
-   worst case is that spare margin, not a broken layout. */
-.sc-section:has(> .selfcheck[hidden]) { margin: 0; }
-.sc-title { font-weight: 600; }
-.sc-list { margin: 0.3rem 0 0; padding-left: 1.1rem; }
-.sc-name { font-weight: 600; }
-
 /* --------------------------------------------------------------- upload */
+/* A promise the page keeps by construction — moss, not the accent. */
 .privacy {
-  border: 1px solid var(--accent);
-  background: var(--accent-soft);
+  border: 1px solid var(--moss);
+  background: var(--moss-soft);
   border-radius: 2px;
   padding: 0.7rem 0.85rem;
   margin-bottom: 0.9rem;
 }
-.privacy strong { color: var(--accent); }
+.privacy strong { color: var(--moss); }
 .privacy p:last-child { margin-bottom: 0; }
 
 .upload-row {
@@ -549,8 +564,8 @@ details.method > summary .sm { font-weight: 400; color: var(--ink-soft); font-si
 blockquote.caveat {
   margin: 0.6rem 0 0.9rem;
   padding: 0.7rem 0.9rem;
-  border-left: 3px solid var(--accent);
-  background: var(--bg-sunk);
+  border-left: 3px solid var(--clay);
+  background: var(--clay-soft);
   font-family: var(--serif);
   font-size: 0.95rem;
 }
@@ -710,13 +725,6 @@ footer p { margin-bottom: 0.35rem; }
   </section>
 
   <!-- ======================================================== self-check -->
-  <!-- The identity checks run on every recompute; this region stays empty and
-       hidden while they pass, and appears only on a failure. -->
-  <section aria-labelledby="h-check" class="sc-section">
-    <h2 id="h-check" class="vh">Self-check</h2>
-    <div class="selfcheck pending" id="selfcheck" role="status"></div>
-  </section>
-
   <!-- ========================================================== controls -->
   <section aria-labelledby="h-controls">
     <div class="panel">

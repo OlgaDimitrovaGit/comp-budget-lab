@@ -20,8 +20,10 @@ import sys
 import datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))
-TOKENS = os.path.join(ROOT, "design", "tokens.css")
+# The palette lives next to the build. It used to be read from a shared working
+# file outside the repository, which meant this script could not run for anyone
+# who had only cloned the repository.
+TOKENS = os.path.join(HERE, "palette.css")
 
 FACT_MONTHS = 8
 SIGNAL_THRESHOLD = 3.0   # % — the "problem" threshold, configurable on the page
@@ -55,10 +57,10 @@ def read_comment():
 
 
 def extract_palette():
-    """Takes the :root block from the shared tokens.css.
+    """Takes the :root block from palette.css.
 
     The values are never retyped: there is one source of truth, and a copy
-    entered by hand drifts from it silently. All three blocks are taken — light,
+    entered by hand drifts from it silently. All three blocks are taken - light,
     system dark, and the manual toggle.
     """
     css = open(TOKENS, encoding="utf-8").read()
