@@ -6,9 +6,22 @@ What it costs to close the unexplained gender pay gap, and how that cost lands
 on a budget. Minimum compliance against full equalisation, under EU Directive
 2023/970.
 
-The page runs entirely in your browser. It makes no network requests: nothing is
-uploaded, stored or transmitted. Load your own CSV and the numbers are computed
-in the tab.
+## You do not need to download anything
+
+Open the link and the calculator runs in your browser. Load your own CSV and the
+figures are computed in the tab: nothing is uploaded, stored or transmitted, and
+the page makes no network requests at all.
+
+If you would rather work in a spreadsheet, or want to keep a copy:
+
+| | |
+|---|---|
+| **[pay-gap-model.xlsx](pay-gap-model.xlsx)** | the same calculation in Excel, live formulas. Download and open: it needs nothing else. |
+| **[sample.csv](sample.csv)** | the input format, filled in. Replace the rows with your own. |
+
+Everything inside `build/` is the source the page is assembled from, plus the
+checks that verify the figures. It is there so the numbers can be audited. **You
+do not need any of it to use the calculator or the workbook.**
 
 ## On the demo data
 
@@ -52,38 +65,40 @@ example.
 
 ## The Excel model
 
-`build/excel/pay-gap-model.xlsx` carries the whole money chain in live formulas:
+`pay-gap-model.xlsx` carries the whole money chain in live formulas:
 no array formulas, no macros, nothing hidden. Medians are computed by rank, the
 regression by explicit sums and Cramer's rule, so the linear algebra is visible
 in the cells. Open it, change a salary, and watch every downstream figure move.
 
-The chain was verified end to end: Excel against `reference_calc.py`, against
-`calc.js` in Node, against the live page in Chrome. All categories and totals
-agree to 1e-9.
+The chain was verified end to end: Excel against `build/excel/reference_calc.py`,
+against `calc.js` in Node, against the live page in Chrome. All categories and
+totals agree to 1e-9.
 
 ## Files
 
 ```
 index.html                          the calculator, self-contained, no dependencies
-build/calc.js                       the calculation, pure functions, no DOM
-build/csv.js                        CSV import
-build/ui.js                         DOM and chart
-build/shell.html                    markup and styles
-build/bundle.py                     assembles the four into index.html
-build/sample.csv                    10-row sample showing the expected columns
-build/check-behaviour.js            behaviour of the page under input
-build/check-render.js               what the page renders
-build/check-meta.js                 metadata, and that no network request is made
-build/check-legibility.js           type sizes and contrast
-build/check-visual.js               screenshots, both themes
-build/check-constants.js            reconciles the defaults across every file holding them
-build/shot-chart.js                 a large screenshot of the chart card
-build/excel/pay-gap-model.xlsx      the same model in Excel, live formulas throughout
-build/excel/pay-gap-model-mini.xlsx the same structure on 10 rows
-build/excel/build_model.py          builds the workbook from CSV
-build/excel/reference_calc.py       independent Python port of calc.js, used to cross-check
-build/excel/export_demo.js          writes the demo dataset out of calc.js
-build/excel/demo-data.csv           the 212-employee demo dataset
+pay-gap-model.xlsx                  the same model in Excel, live formulas throughout
+sample.csv                          10-row sample showing the expected columns
+README.md                           this file
+
+build/                              sources and checks - not needed to use the tool
+  calc.js                           the calculation, pure functions, no DOM
+  csv.js                            CSV import
+  ui.js                             DOM and chart
+  shell.html                        markup and styles
+  bundle.py                         assembles the four into index.html
+  check-behaviour.js                behaviour of the page under input
+  check-render.js                   what the page renders
+  check-meta.js                     metadata, and that no network request is made
+  check-legibility.js               type sizes and contrast
+  check-visual.js                   screenshots, both themes
+  check-constants.js                reconciles the defaults across every file holding them
+  shot-chart.js                     a large screenshot of the chart card
+  excel/build_model.py              builds the workbook from CSV
+  excel/reference_calc.py           independent Python port of calc.js, used to cross-check
+  excel/export_demo.js              writes the demo dataset out of calc.js
+  excel/demo-data.csv               the 212-employee demo dataset
 ```
 
 ## Reproducing the numbers
@@ -91,7 +106,7 @@ build/excel/demo-data.csv           the 212-employee demo dataset
 ```
 python build/bundle.py                 # writes index.html from the sources in build/
 python build/excel/reference_calc.py   # the independent port, prints every category
-python build/excel/build_model.py      # writes the xlsx
+python build/excel/build_model.py      # writes pay-gap-model.xlsx
 node build/check-behaviour.js          # behaviour, render and metadata checks
 node build/check-render.js
 node build/check-meta.js

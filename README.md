@@ -42,12 +42,17 @@ Details, input format, the Excel model and how to reproduce the numbers:
 
 ## Layout
 
-Each artefact is a folder of its own, with the same shape:
+Each artefact is a folder of its own, with the same shape. **Nothing needs to be
+downloaded to use them:** open a link and the page runs in your browser. The
+three files beside it are there for anyone who wants a copy or prefers a
+spreadsheet.
 
 ```
 <artefact>/index.html    the page, self-contained, no dependencies
-<artefact>/build/        sources, demo data, Excel model and checks
+<artefact>/*.xlsx        the same model in Excel, live formulas
+<artefact>/sample.csv    the input format, filled in
 <artefact>/README.md     what it is, how to reproduce the numbers
+<artefact>/build/        sources, demo data and checks - not needed to use the tool
 ```
 
 `index.html` in each folder is generated from the sources in its `build/`; the

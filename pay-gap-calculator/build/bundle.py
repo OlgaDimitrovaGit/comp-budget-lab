@@ -18,7 +18,9 @@ html = io.open(os.path.join(HERE, 'shell.html'), encoding='utf-8').read()
 # everywhere it is republished. Base64 keeps the newlines intact.
 SAMPLE_TOKEN = '__SAMPLE_CSV_DATA_URI__'
 if SAMPLE_TOKEN in html:
-    csv_bytes = io.open(os.path.join(HERE, 'sample.csv'), 'rb').read()
+    # sample.csv sits beside the page, not in build/: a reader who opens the
+    # folder should see the three files that are theirs to take.
+    csv_bytes = io.open(os.path.join(ROOT, 'sample.csv'), 'rb').read()
     data_uri = 'data:text/csv;charset=utf-8;base64,' + \
         base64.b64encode(csv_bytes).decode('ascii')
     html = html.replace(SAMPLE_TOKEN, data_uri)

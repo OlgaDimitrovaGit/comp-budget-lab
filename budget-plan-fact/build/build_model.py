@@ -613,7 +613,9 @@ def build(out_path):
 
 
 def main():
-    out = os.path.join(HERE, "budget-plan-fact-model.xlsx")
+    # The workbook sits beside the page, not in build/: it is one of the three
+    # files a reader takes away.
+    out = os.path.join(os.path.dirname(HERE), "budget-plan-fact-model.xlsx")
     path, n, departments = build(out)
     print("Written: %s" % path)
     print("Data rows: %d, departments: %d" % (n, len(departments)))

@@ -27,17 +27,19 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def _find_paygap():
     """Locate the first artefact's data, which this dataset is built on top of.
 
-    Two layouts have to work. In the published repository the calculator and
-    this dashboard are siblings, so the data sits at <repo>/build/excel. In the
-    working tree they are separate projects and it sits two levels up. The
-    published layout is checked first: a reader who clones the repository must
-    be able to reproduce the CSV, and silently falling back to a path that only
-    exists on one machine would make "reproducible" untrue.
+    Two layouts have to work. In the published repository each artefact has a
+    folder of its own, so the data sits at <repo>/pay-gap-calculator/build/excel.
+    In the working tree the dashboard may be a separate project, and it sits
+    further up. The published layout is checked first: a reader who clones the
+    repository must be able to reproduce the CSV, and silently falling back to a
+    path that only exists on one machine would make "reproducible" untrue.
     """
     candidates = [
-        os.path.normpath(os.path.join(HERE, "..", "excel")),
         os.path.normpath(os.path.join(
-            HERE, "..", "..", "PROJECT-pay-gap-calculator", "build", "excel")),
+            HERE, "..", "..", "pay-gap-calculator", "build", "excel")),
+        os.path.normpath(os.path.join(
+            HERE, "..", "..", "..", "PROJECT-pay-gap-calculator",
+            "pay-gap-calculator", "build", "excel")),
     ]
     for path in candidates:
         if os.path.exists(os.path.join(path, "demo-data.csv")):

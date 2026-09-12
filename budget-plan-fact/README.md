@@ -9,10 +9,23 @@ there is a problem and a call is due.
 It answers where the budget diverges from plan and by how much. It does not
 answer why: causes belong in the conversation, not on the screen.
 
-The page runs entirely in your browser. It makes no network requests: nothing is
-uploaded, stored or transmitted. Load your own CSV and the numbers are computed
-in the tab. The page then hands you back the same self-contained file with your
-data inside, which you send on as a link.
+## You do not need to download anything
+
+Open the link and the dashboard runs in your browser. Load your own CSV and the
+figures are computed in the tab: nothing is uploaded, stored or transmitted, and
+the page makes no network requests at all. The page then hands you back the same
+self-contained file with your data inside, which you send on as a link.
+
+If you would rather work in a spreadsheet, or want to keep a copy:
+
+| | |
+|---|---|
+| **[budget-plan-fact-model.xlsx](budget-plan-fact-model.xlsx)** | the same calculation in Excel, live formulas. Download and open: it needs nothing else. |
+| **[sample.csv](sample.csv)** | the input format, filled in. Replace the rows with your own. |
+
+Everything inside `build/` is the source the page is assembled from, plus the
+generator and the checks that verify the figures. It is there so the numbers can
+be audited. **You do not need any of it to use the dashboard or the workbook.**
 
 ## On the demo data
 
@@ -70,14 +83,14 @@ Sales,Sep,9,120000,,123000
 
 `fact` is filled through the last closed month and blank after it; `forecast` is
 the opposite. Every department needs all twelve months. Amounts in euros.
-`build/sample.csv` is a two-department working example.
+`sample.csv` is a two-department working example.
 
 The comment shown to the director is typed into the page, not carried in the
 CSV.
 
 ## The Excel model
 
-`build/budget-plan-fact-model.xlsx` carries the same calculation in live
+`budget-plan-fact-model.xlsx` carries the same calculation in live
 formulas across seven sheets: plan → actual → deviation → running total →
 forecast with equalisation → annual result. Nothing is written in as a number
 that could be computed; openpyxl writes the formulas and real Excel computes
@@ -91,18 +104,21 @@ deviation, eight-month plan and eight-month actual. No formula errors.
 
 ```
 index.html                          the dashboard, self-contained, no dependencies
-build/template.html                 markup, styles and logic
-build/build_dashboard.py            embeds data and palette into the page
-build/generate_dataset.py           the seeded dataset generator, with its checks
-build/budget-plan-fact.csv          the demo dataset, 7 departments x 12 months
-build/sample.csv                    two-department example of the input format
-build/department-deviation.csv      per-department deviation, input to the generator and the model
-build/make_sample.py                writes sample.csv
-build/build_model.py                builds the Excel workbook from the CSV
-build/budget-plan-fact-model.xlsx   the same model in Excel, live formulas
-build/recalc_model.ps1              recalculates the workbook and checks it against the CSV
-build/comment.txt                   the comment baked into the published build
-build/palette.css                   the palette the page is built with
+budget-plan-fact-model.xlsx         the same model in Excel, live formulas
+sample.csv                          two-department example of the input format
+README.md                           this file
+
+build/                              sources and checks - not needed to use the tool
+  template.html                     markup, styles and logic
+  build_dashboard.py                embeds data and palette into the page
+  palette.css                       the palette the page is built with
+  generate_dataset.py               the seeded dataset generator, with its checks
+  budget-plan-fact.csv              the demo dataset, 7 departments x 12 months
+  department-deviation.csv          per-department deviation, input to the generator and the model
+  make_sample.py                    writes sample.csv
+  build_model.py                    builds the Excel workbook from the CSV
+  recalc_model.ps1                  recalculates the workbook and checks it against the CSV
+  comment.txt                       the comment baked into the published build
 ```
 
 The dashboard is generated. Edit `build/template.html` and run
@@ -113,7 +129,7 @@ template; that file is what ships as `index.html`.
 
 ```
 python build/generate_dataset.py          # writes budget-plan-fact.csv, runs 11 checks
-python build/build_model.py               # writes the xlsx
+python build/build_model.py               # writes budget-plan-fact-model.xlsx
 powershell -File build/recalc_model.ps1   # recalculates it and verifies against the CSV
 python build/build_dashboard.py           # writes build/dashboard.html
 ```
