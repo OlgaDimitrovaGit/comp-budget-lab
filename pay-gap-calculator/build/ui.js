@@ -5,7 +5,7 @@
  * ==========================================================================*/
 
 /* ---------------------------------------------------------------------------
- * FIXTURE_RESULT — part B's own stand-in for the Result shape from CONTRACT.md.
+ * FIXTURE_RESULT — part B's own stand-in for the Result shape.
  * Used only while part A is missing; dropped at final assembly.
  * Numbers are hand-made and internally plausible, not computed.
  * -------------------------------------------------------------------------*/
@@ -766,59 +766,39 @@ var UI = (function () {
 
   /* --------------------------------------------------------- self-check */
 
-  /* The checks run on every recompute, but a green banner on the first screen is
-     noise: it reports the expected state. Only a failure is worth the reader's
-     attention, and it matters most on their own CSV, where a broken figure would
-     otherwise look like a finding. Passing hides the element; failing shows it. */
+  /* The checks still run on every recompute, but nothing about them is drawn on
+     the page. A banner reporting the expected state is noise when it passes, and
+     on a reader's own CSV a failure of the demo-data checks (which describe the
+     generated fixture, not their file) read as a fault in their numbers when the
+     numbers were fine. The result is exposed on window for the automated checks
+     and logged to the console; the page itself stays silent. */
   function renderSelfCheck(result) {
-    var host = $('selfcheck');
-    clear(host);
-    host.hidden = false;
-
-    if (typeof CALC === 'undefined' || typeof CALC.selfCheck !== 'function') {
-      host.className = 'selfcheck pending';
-      host.appendChild(el('span', 'sc-dot'));
-      host.appendChild(el('span', 'sc-text',
-        'Self-check unavailable: the calculation engine is not loaded (fixture preview).'));
-      return;
-    }
+    if (typeof CALC === 'undefined' || typeof CALC.selfCheck !== 'function') return;
 
     var cr;
     try {
       cr = CALC.selfCheck(result);
     } catch (e) {
-      host.className = 'selfcheck fail';
-      host.appendChild(el('span', 'sc-dot'));
-      host.appendChild(el('span', 'sc-text', 'Self-check threw an error: ' + (e && e.message)));
+      if (typeof console !== 'undefined') console.error('Self-check threw:', e);
       return;
     }
 
     var checks = (cr && cr.checks) || [];
     var failed = checks.filter(function (c) { return !c.passed; });
 
-    if (cr && cr.passed && !failed.length) {
-      /* Hidden, not removed: the node keeps its aria-live region and the
-         checks/count stay queryable for the automated checks. */
-      host.className = 'selfcheck pass';
-      host.setAttribute('data-checks', String(checks.length));
-      host.hidden = true;
-      return;
-    }
+    /* Queryable by build/check-*.js without any visible element. */
+    try {
+      window.__selfCheck = {
+        passed: !!(cr && cr.passed), total: checks.length,
+        failed: failed.map(function (c) { return c.name; })
+      };
+    } catch (e) { /* no window: nothing to expose */ }
 
-    host.className = 'selfcheck fail';
-    host.appendChild(el('span', 'sc-dot'));
-    var wrap = el('div', 'sc-text');
-    wrap.appendChild(el('div', 'sc-title',
-      'Self-check failed: ' + failed.length + ' of ' + checks.length + ' checks did not hold.'));
-    var ul = el('ul', 'sc-list');
-    failed.forEach(function (c) {
-      var li = el('li');
-      li.appendChild(el('span', 'sc-name', c.name));
-      if (c.detail) li.appendChild(el('span', 'sc-detail', ': ' + c.detail));
-      ul.appendChild(li);
-    });
-    wrap.appendChild(ul);
-    host.appendChild(wrap);
+    if (failed.length && typeof console !== 'undefined') {
+      console.warn('Self-check: ' + failed.length + ' of ' + checks.length
+        + ' checks did not hold: '
+        + failed.map(function (c) { return c.name; }).join('; '));
+    }
   }
 
   /* -------------------------------------------------------------- method */

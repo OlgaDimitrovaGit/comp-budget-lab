@@ -1,13 +1,13 @@
-/* Проверка авторской метки, лицензии, метаданных и образца CSV.
+/* Checks the author credit, licence, metadata and the CSV sample.
  *
- * Главное здесь — что внешние ссылки в подвале остались ссылками и не
- * превратились в сетевые вызовы: правило проекта запрещает запросы, а не
- * гиперссылки, и разница проверяется, а не предполагается.
+ * The main point here is that the external links in the footer stayed links and
+ * did not turn into network calls: the rule forbids requests, not hyperlinks,
+ * and the difference is verified rather than assumed.
  */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
-const PAGE = 'file:///' + path.resolve(__dirname, '..', 'pay-gap-calculator.html')
+const PAGE = 'file:///' + path.resolve(__dirname, '..', 'index.html')
   .split(path.sep).join('/');
 
 (async () => {

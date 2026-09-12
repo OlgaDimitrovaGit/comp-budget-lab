@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Inline build/*.js into build/shell.html -> pay-gap-calculator.html.
+"""Inline build/*.js into build/shell.html -> index.html.
 
 The bundle is a derived file: never edit it by hand. Run this
 after any change under build/. It asserts that no <script src=> survives —
@@ -9,7 +9,7 @@ import base64, io, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-OUT = os.path.join(ROOT, 'pay-gap-calculator.html')
+OUT = os.path.join(ROOT, 'index.html')
 
 html = io.open(os.path.join(HERE, 'shell.html'), encoding='utf-8').read()
 

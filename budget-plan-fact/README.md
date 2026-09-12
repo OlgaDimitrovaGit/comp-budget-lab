@@ -53,7 +53,7 @@ salary equalisation takes effect: €33,043 a month across 52 of 212 employees,
 
 That figure is not invented here. It is the output of the first artefact in this
 repository, the [Pay Gap Remediation Cost
-Calculator](https://olgadimitrovagit.github.io/comp-budget-lab/), which measures
+Calculator](https://olgadimitrovagit.github.io/comp-budget-lab/pay-gap-calculator/), which measures
 the unexplained gap and prices the options for closing it. This dashboard takes
 that output and asks the next question: what the decision does to a budget that
 was already approved.
@@ -90,21 +90,24 @@ deviation, eight-month plan and eight-month actual. No formula errors.
 ## Files
 
 ```
-budget-plan-fact/index.html         the dashboard, self-contained, no dependencies
+index.html                          the dashboard, self-contained, no dependencies
 build/template.html                 markup, styles and logic
 build/build_dashboard.py            embeds data and palette into the page
 build/generate_dataset.py           the seeded dataset generator, with its checks
 build/budget-plan-fact.csv          the demo dataset, 7 departments x 12 months
 build/sample.csv                    two-department example of the input format
+build/department-deviation.csv      per-department deviation, input to the generator and the model
+build/make_sample.py                writes sample.csv
 build/build_model.py                builds the Excel workbook from the CSV
 build/budget-plan-fact-model.xlsx   the same model in Excel, live formulas
 build/recalc_model.ps1              recalculates the workbook and checks it against the CSV
 build/comment.txt                   the comment baked into the published build
+build/palette.css                   the palette the page is built with
 ```
 
 The dashboard is generated. Edit `build/template.html` and run
 `python build/build_dashboard.py`, which writes `dashboard.html` next to the
-template; that file is what ships as `budget-plan-fact/index.html`.
+template; that file is what ships as `index.html`.
 
 ## Reproducing the numbers
 
