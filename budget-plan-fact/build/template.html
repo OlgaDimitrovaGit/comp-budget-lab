@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payroll Budget — Plan vs Actual</title>
+<style>
+/*PALETTE*/
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  padding: 24px 20px 48px;
+}
+
+.wrap { max-width: 1080px; margin: 0 auto; }
+
+/* ---------- Masthead ---------- */
+.head { margin-bottom: 20px; }
+.head h1 {
+  font-size: 21px; font-weight: 600; margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+.head .sub { color: var(--ink-soft); font-size: 14px; }
+
+/* ---------- Cards ---------- */
+.cards {
+  display: grid; gap: 12px; margin-bottom: 16px;
+  grid-template-columns: repeat(3, 1fr);
+}
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px 13px;
+  box-shadow: var(--shadow);
+  /* Status bar on the left: colour never works alone, an icon and a word
+     always sit beside it (in the badge below). */
+  border-left: 3px solid var(--line);
+}
+.card.is-err  { border-left-color: var(--err); }
+.card.is-warn { border-left-color: var(--warn); }
+.card.is-ok   { border-left-color: var(--ok); }
+
+/* Card heading in sentence case, not caps: caps at a small size reads as
+   shouting, and the reference style (Paddle) keeps it lowercase. */
+.card .label {
+  font-size: 13px; color: var(--ink-soft); margin-bottom: 10px;
+  font-weight: 500;
+}
+
+/* Number and badge on one line (reference: MRR $135,755 (+2.5%)); the
+   "from X" caption sits on its own line below, small and quiet. */
+.card .headline {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.card .big {
+  font-family: var(--sans); font-variant-numeric: tabular-nums;
+  /* The large number dominates the card. It was 26px: only 1.24x the h1
+     (21px), so the number did not win against the page title. In all six
+     references the large number is 2.5-3x the caption.
+     clamp: no less than 30 on a phone, up to 38 on desktop. */
+  font-size: clamp(30px, 4.2vw, 38px); font-weight: 700; letter-spacing: -0.01em;
+  line-height: 1.15; white-space: nowrap;
+}
+.card .u { font-size: 14px; font-weight: 500; color: var(--ink-mid); }
+
+/* Pill badge: direction plus percentage on a tinted ground. Colour carries
+   meaning together with the arrow and the text inside it, never alone. */
+.badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 13px; font-weight: 600;
+  padding: 3px 9px 3px 7px; border-radius: 999px;
+  white-space: nowrap; line-height: 1.3;
+}
+.badge.is-err  { background: var(--err-bg);  color: var(--err); }
+.badge.is-warn { background: var(--warn-bg); color: var(--warn); }
+.badge.is-ok   { background: var(--ok-bg);   color: var(--ok); }
+
+.card .from {
+  font-size: 13px; color: var(--ink-faint); margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.thr {
+  font-size: 12px; color: var(--ink-faint); margin-bottom: 22px;
+}
+
+/* ---------- Comment ---------- */
+.note {
+  background: var(--bg-sunk);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 26px;
+}
+.note h2 {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--ink-soft); margin: 0 0 6px; font-weight: 600;
+  display: flex; justify-content: space-between; gap: 12px;
+}
+.note h2 .when { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.note p { margin: 0; font-size: 14px; color: var(--ink-mid); }
+
+/* ---------- Sections ---------- */
+section { margin-bottom: 26px; }
+.shead {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 12px; flex-wrap: wrap;
+}
+.shead h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.shead .hint { font-size: 12px; color: var(--ink-faint); }
+
+select {
+  font-family: var(--sans); font-size: 13px;
+  padding: 5px 10px; border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--bg-panel); color: var(--ink);
+  margin-left: auto;
+}
+select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Chart ---------- */
+.legend .sw {
+  width: 11px; height: 11px; border-radius: 2px; border-top: none;
+  vertical-align: -1px;
+}
+.legend .sw-fc {
+  background: repeating-linear-gradient(45deg,
+    var(--accent) 0 2px, var(--bg-panel) 2px 4px);
+  border: 1px solid var(--accent);
+}
+.chartbox { overflow-x: auto; }
+svg { display: block; width: 100%; height: auto; }
+.legend {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--ink-mid); margin-top: 10px;
+}
+.legend i {
+  display: inline-block; width: 20px; height: 0; vertical-align: middle;
+  border-top-width: 2px; margin-right: 6px;
+}
+
+/* ---------- Table ---------- */
+/* table-layout: fixed with explicit percentages. Widths used to be computed
+   by the browser from content (auto), so the "actual" group (wide sums such
+   as 11,276K) got noticeably more room than "vs plan" (short percentages).
+   The centred group heading then lined up with none of the columns beneath
+   it, and the whole header looked shifted. Fixed percentages give the same
+   proportion in all three groups and make the layout predictable for any
+   input numbers, not only for the current dataset. */
+table {
+  width: 100%; border-collapse: collapse; font-size: 15px;
+  table-layout: fixed;
+}
+/* 19 + (15+13)x3 = 103 -> table-layout:fixed shrinks these proportionally.
+   It was 22/15/11: the delta column at 11% came to ~124px, and after C2 the
+   second line ("+38K", 12px) no longer fitted, so the percentage drifted
+   left of the right edge and the "August" group stopped sitting above its
+   own columns. The department column gives up 3%, delta takes 2%. */
+col.c-dept { width: 19%; }
+col.c-val  { width: 15%; }
+col.c-dev  { width: 13%; }
+
+th, td {
+  padding: 10px 10px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* overflow on data cells only. On th it clipped the second line (.unit with
+   display:block) inside a fixed-width nowrap cell: the word "actual" would
+   not compress, the currency sign dropped below it, and the first group's
+   heading appeared to drift left of its own columns. */
+td { overflow: hidden; text-overflow: ellipsis; }
+th {
+  font-size: 12px; text-transform: none; letter-spacing: 0;
+  color: var(--ink-mid); font-weight: 600;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+th .unit {
+  display: inline; font-weight: 500; color: var(--ink-faint);
+  font-size: 11px; margin-left: 3px;
+}
+/* Variance on two lines: the percentage as before, the absolute amount
+   smaller and quieter beneath it. Column widths do not change
+   (c-dept + c-val + c-dev already sums to exactly 100%), so the second line
+   goes downward rather than sideways.
+   The percentage stays the lead: it is comparable across departments,
+   absolute amounts are not (Sales and Legal differ too much in size). The
+   absolute figure answers "how much is that in money", which is why it was
+   asked for. */
+td .abs {
+  display: block; font-size: 12px; font-weight: 400;
+  color: var(--ink-faint); margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+th.grp {
+  /* Period group: a heading centred over its own two columns.
+     The columns used to be auto-width and of differing size, so the centre of
+     the heading matched none of them. Now the columns are fixed width
+     (colgroup) and the right edge really does line up with the right edge of
+     the data; but with a short word ("August") right alignment reads as
+     "pushed against the next group border" rather than "sitting above its
+     own columns", so the heading is centred now that the widths are honest. */
+  text-align: center; border-bottom: none;
+  padding-bottom: 3px; color: var(--ink-mid);
+}
+/* Every column except the first (the department name) follows one rule:
+   right aligned, with decimal places on a single vertical.
+
+   The header has two rows, so `th:first-child` cannot be used here: in the
+   SECOND header row the first cell is not "Department" (that one lives in
+   the first row with rowspan="2") but the August group "actual" cell. The
+   selector matched it and applied text-align:left, so the word sat at the
+   left edge of its column while the numbers below it sat at the right. That
+   is the "actual drifts left" defect that was repeatedly sought in the
+   column widths: measuring in Chrome showed align "left" on the first cell
+   of the second row against "right" on the other five, with the column
+   bounds entirely correct (152.3px wide, right edge 542.3 for both).
+   Left alignment is therefore addressed only to the department cell. */
+thead tr:first-child th:first-child,
+tbody td:first-child,
+tfoot td:first-child { text-align: left; }
+td { border-bottom: 1px solid var(--line-soft);
+     color: var(--ink);
+     font-family: var(--sans); }
+
+tbody tr:last-child td { border-bottom: none; }
+tfoot td {
+  border-top: 2px solid var(--line); border-bottom: none;
+  font-weight: 600; padding-top: 11px;
+}
+.dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  margin-right: 8px; vertical-align: baseline;
+}
+.dot.is-err  { background: var(--err); }
+.dot.is-warn { background: var(--warn); }
+.dot.is-ok   { background: var(--ok); }
+.v-err  { color: var(--err); }
+.v-warn { color: var(--warn); }
+.v-ok   { color: var(--ok); }
+.sep { border-left: 1px solid var(--line-soft); }
+
+/* ---------- Update block ---------- */
+details.upd {
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg-panel); margin-bottom: 26px;
+}
+details.upd summary {
+  padding: 12px 16px; cursor: pointer; font-size: 14px;
+  font-weight: 600; color: var(--ink-mid); list-style: none;
+}
+details.upd summary::-webkit-details-marker { display: none; }
+details.upd summary::before { content: "\25b8\00a0"; color: var(--ink-faint); }
+details.upd[open] summary::before { content: "\25be\00a0"; }
+details.upd summary:focus-visible { outline: 2px solid var(--focus); }
+.updbody { padding: 0 16px 16px; border-top: 1px solid var(--line-soft); }
+.step { margin-top: 14px; }
+.step > label {
+  display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px;
+}
+.step .why { font-size: 12px; color: var(--ink-faint); margin-bottom: 7px; }
+textarea, input[type=number] {
+  font-family: var(--sans); font-size: 14px; color: var(--ink);
+  background: var(--bg-sunk); border: 1px solid var(--line);
+  border-radius: 7px; padding: 8px 10px; width: 100%;
+}
+textarea { min-height: 76px; resize: vertical; line-height: 1.45; }
+input[type=number] { width: 90px; }
+input[type=file] { font-size: 13px; max-width: 100%; }
+textarea:focus-visible, input:focus-visible { outline: 2px solid var(--focus); }
+
+button {
+  font-family: var(--sans); font-size: 14px; font-weight: 600;
+  padding: 9px 16px; border-radius: 8px; cursor: pointer;
+  background: var(--accent); color: #fff; border: 1px solid transparent;
+}
+button:hover { background: var(--accent-lift); }
+button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+button[disabled] { opacity: .5; cursor: default; }
+
+.msg { font-size: 13px; margin-top: 10px; padding: 9px 12px; border-radius: 7px; }
+.msg.ok  { background: var(--ok-bg);  color: var(--ok); }
+.msg.bad { background: var(--err-bg); color: var(--err); }
+.msg:empty { display: none; }
+
+pre {
+  font-family: var(--mono); font-size: 12px; line-height: 1.5;
+  background: var(--bg-sunk); border: 1px solid var(--line-soft);
+  border-radius: 7px; padding: 10px 12px; overflow-x: auto; margin: 8px 0 0;
+}
+
+/* ---------- Footer ---------- */
+footer {
+  margin-top: 34px; padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px; color: var(--ink-faint);
+}
+footer a { color: var(--accent); }
+
+/* ---------- Narrow screen ---------- */
+@media (max-width: 860px) {
+  .cards { grid-template-columns: 1fr; }
+
+  /* On a narrow screen the cards stack, and the 12-month forecast - the very
+     figure the link is opened for - would fall below the fold as the third
+     one. An HR director would see two neutral cards and move on without
+     learning that the year is red. So on a phone the year comes first; on a
+     wide screen all three are visible at once and the order stays
+     chronological. */
+  .cards .card:nth-child(3) { order: -1; }
+  .cards { display: flex; flex-direction: column; }
+}
+
+@media (max-width: 620px) {
+  body { padding: 18px 14px 40px; }
+  .head h1 { font-size: 19px; }
+
+  /* The table becomes a list of cards: seven departments against nine
+     numbers cannot be read at 360px at any type size. */
+  table, thead, tbody, tfoot, tr, th, td { display: block; }
+  thead { display: none; }
+  tbody tr, tfoot tr {
+    border: 1px solid var(--line); border-radius: 9px;
+    padding: 12px 14px; margin-bottom: 10px; background: var(--bg-panel);
+  }
+  tfoot tr { border-width: 2px; }
+  tbody td, tfoot td {
+    border: none; padding: 3px 0; text-align: right;
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 14px; font-size: 14px;
+  }
+  tbody td::before, tfoot td::before {
+    content: attr(data-l);
+    font-family: var(--sans); font-size: 12px; color: var(--ink-soft);
+    text-align: left; font-weight: 500;
+  }
+  /* Second line of the delta cell on a phone. On desktop .abs is a block
+     under the percentage, but here the cell is itself a flex row
+     (label | value), and a block inside it would become a THIRD row item:
+     the percentage would slide to the middle, the amount would be pushed to
+     the right edge, and the pair would stop reading as one value. So on a
+     narrow screen the absolute figure sits inline right after the
+     percentage, separated by a space, at the same quiet size. */
+  tbody td .abs, tfoot td .abs {
+    display: inline; margin-top: 0; margin-left: 6px;
+  }
+  /* The department name is the card heading: on the left, with the status
+     dot before it. The general rule pushes cells right, and without this the
+     name drifted to the right edge with the dot hanging mid-line. */
+  tbody td:first-child, tfoot td:first-child {
+    font-size: 15px; font-weight: 600; padding-bottom: 8px;
+    margin-bottom: 6px; border-bottom: 1px solid var(--line-soft);
+    display: block; text-align: left;
+  }
+  tbody td:first-child::before, tfoot td:first-child::before { content: ""; }
+  .sep { border-left: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>Payroll Budget — Plan vs Actual</h1>
+    <div class="sub" id="sub"></div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="note" id="note" hidden>
+    <h2>Comment <span class="when" id="noteWhen"></span></h2>
+    <p id="noteText"></p>
+  </div>
+
+  <section>
+    <div class="shead">
+      <h2>Plan vs actual, monthly</h2>
+      <select id="filter" aria-label="Department"></select>
+    </div>
+    <div class="panel">
+      <div class="chartbox"><svg id="chart" viewBox="0 0 760 150"
+        role="img" aria-label="Plan vs actual and forecast, by month"></svg></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead">
+      <h2>Departments</h2>
+      <span class="hint">sorted by full-year variance, worst first</span>
+    </div>
+    <div class="panel">
+      <table id="tbl">
+        <colgroup>
+          <col class="c-dept">
+          <col class="c-val"><col class="c-dev">
+          <col class="c-val"><col class="c-dev">
+          <col class="c-val"><col class="c-dev">
+        </colgroup>
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <details class="upd">
+    <summary>Update data</summary>
+    <div class="updbody">
+
+      <div class="step">
+        <label for="csv">1. CSV file</label>
+        <div class="why">
+          Upload the full file from January, not just the new month: prior
+          periods' reversals carry over automatically.
+        </div>
+        <input type="file" id="csv" accept=".csv,text/csv">
+      </div>
+
+      <div class="step">
+        <label for="cmt">2. Comment for this month</label>
+        <div class="why">
+          Shown to the HRD on open. Leave blank to hide the block.
+        </div>
+        <textarea id="cmt"></textarea>
+      </div>
+
+      <div class="step">
+        <label for="thrIn">3. "Problem" threshold, %</label>
+        <div class="why">
+          Full-year variance at or above this value is flagged red.
+        </div>
+        <input type="number" id="thrIn" min="0.1" max="50" step="0.1">
+      </div>
+
+      <div class="msg" id="msg"></div>
+
+      <div class="step">
+        <button id="dl" disabled>Download dashboard</button>
+        <div class="why" style="margin-top:7px">
+          Downloads the same self-contained file with the new data inside.
+          Send that file on as a link.
+        </div>
+      </div>
+
+      <div class="step">
+        <label>File format</label>
+        <pre>department,month,month_no,plan,fact,forecast
+Sales,Jan,1,120000,117600,
+Sales,Sep,9,120000,,123000</pre>
+        <div class="why" style="margin-top:7px">
+          Fact is filled through the last closed month, blank after that.
+          Forecast is the opposite. Amounts in euros, comma-separated.
+        </div>
+      </div>
+
+    </div>
+  </details>
+
+  <footer>
+    Olga Dimitrova &middot;
+    <a href="https://www.linkedin.com/in/olga-dimitrova-04311742a/">LinkedIn</a> &middot;
+    CC BY&nbsp;4.0 &middot; data is modeled
+  </footer>
+
+</div>
+
+<script id="payload" type="application/json">"__DATA__"</script>
+<script>
+(function () {
+  "use strict";
+
+  var D = JSON.parse(document.getElementById("payload").textContent);
+  var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  // ---- Number formatting ---------------------------------------------
+  // An HR director does not need cents: percentages to one decimal, money
+  // without a fractional part. Scale follows magnitude - millions for annual
+  // and cumulative sums, thousands for monthly figures and for variances.
+  function pct(v) {
+    return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "%";
+  }
+  function mln(v) {
+    return "€" + (v / 1e6).toFixed(2) + "M";
+  }
+  function tys(v) {
+    return "€" + Math.round(v / 1e3).toLocaleString("en-US") + "K";
+  }
+  function eur(v) {
+    return "€" + Math.round(v).toLocaleString("en-US");
+  }
+  // Thousands WITHOUT the currency sign, for table cells. The unit is already
+  // carried in the group heading (th .unit), and repeating it in every cell
+  // ate into the width: at c-val 15% the real field is ~149px, and a string
+  // like "11,276K" with a sign hit overflow:hidden - the number was silently
+  // truncated with an ellipsis and the column looked shifted. The rule: the
+  // unit is set apart from the number and is not repeated in every cell
+  // (RULES section 5).
+  function tysBare(v) {
+    return Math.round(v / 1e3).toLocaleString("en-US") + "K";
+  }
+  function tysSigned(v) {
+    return (v >= 0 ? "+" : "−") + tys(Math.abs(v));
+  }
+
+  // ---- Roll-up -------------------------------------------------------
+  function aggregate(rows, factMonths) {
+    var deps = [], byDep = {};
+    rows.forEach(function (r) {
+      if (!byDep[r.d]) { byDep[r.d] = []; deps.push(r.d); }
+      byDep[r.d].push(r);
+    });
+
+    function sums(list) {
+      var o = { augP: 0, augF: 0, p8: 0, f8: 0, pY: 0, eY: 0 };
+      list.forEach(function (r) {
+        var exp = r.f !== null ? r.f : r.c;
+        o.pY += r.p;
+        o.eY += exp;
+        if (r.n === factMonths) { o.augP += r.p; o.augF += exp; }
+        if (r.n <= factMonths)  { o.p8 += r.p;  o.f8 += exp; }
+      });
+      return o;
+    }
+
+    var perDep = deps.map(function (d) {
+      var s = sums(byDep[d]);
+      s.dep = d;
+      s.name = D.deptEn[d] || d;
+      return s;
+    });
+    // Sorted worst first by the full-year figure.
+    perDep.sort(function (a, b) {
+      return (b.eY - b.pY) / b.pY - (a.eY - a.pY) / a.pY;
+    });
+
+    return { deps: deps, perDep: perDep, total: sums(rows) };
+  }
+
+  // ---- Status --------------------------------------------------------
+  // Colour is never the only carrier of meaning: an icon and a word always
+  // sit beside it. Colour blindness, black-and-white printing, a screenshot
+  // in a messenger - the signal has to survive all of them.
+  // One threshold across all periods.
+  function statusOf(devPct, threshold) {
+    if (devPct >= threshold) return "err";
+    if (devPct >= threshold / 2) return "warn";
+    return "ok";
+  }
+  function wordOf(st, devPct) {
+    if (st === "err") return "over budget";
+    if (st === "warn") return "watch";
+    return devPct < -1 ? "under budget" : "on plan";
+  }
+  // The arrow encodes direction against plan: up means more was spent.
+  // The sign is repeated in the percentage itself, so the signal is threefold:
+  // arrow, sign, colour.
+  //
+  // It is driven by the SIGN of the variance, not by the status. Keying it to
+  // the status (err/warn up, ok down) breaks as soon as a variance is positive
+  // but below half the threshold: the status is "ok", so the card drew a down
+  // arrow next to a "+0.1%" - the arrow and the sign contradicting each other.
+  // The demo dataset never shows it, because every department there is either
+  // clearly over or clearly under; an uploaded CSV reaches it immediately,
+  // which is exactly what the page is for.
+  function arrowOf(devPct) { return devPct >= 0 ? "▲" : "▼"; }
+
+  var MONTH_FULL = {
+    Jan: "January", Feb: "February", Mar: "March", Apr: "April",
+    May: "May", Jun: "June", Jul: "July", Aug: "August",
+    Sep: "September", Oct: "October", Nov: "November", Dec: "December"
+  };
+
+  var state = {
+    rows: D.rows, threshold: D.threshold, comment: D.comment,
+    commentDate: D.commentDate, filter: "__all__"
+  };
+
+  // ---- Rendering -----------------------------------------------------
+  function render() {
+    var agg = aggregate(state.rows, D.factMonths);
+    var t = agg.total;
+    var last = MONTHS[D.factMonths - 1];
+    var lastFull = MONTH_FULL[last] || last;
+
+    // The caption states what is already actual and what is still forecast.
+    // It used to read awkwardly ("actual through August, forecast to
+    // December"); here the period speaks for itself.
+    // "N departments" was removed from the caption: content must match the
+    // purpose of the page. The HR director this dashboard is built for
+    // already knows the make-up of their own area of responsibility, and the
+    // dashboard is not obliged to count their own departments for them.
+    document.getElementById("sub").textContent =
+      "Jan–" + last + ": actual · " + MONTHS[D.factMonths] + "–Dec: forecast";
+
+    var devAug = (t.augF - t.augP) / t.augP * 100;
+    var dev8 = (t.f8 - t.p8) / t.p8 * 100;
+    var devY = (t.eY - t.pY) / t.pY * 100;
+
+    var cards = [
+      { label: lastFull, plan: t.augP, big: t.augF,
+        dev: t.augF - t.augP, pct: devAug, fmt: tys },
+      { label: D.factMonths + " months (Jan–" + last + ")", plan: t.p8,
+        big: t.f8, dev: t.f8 - t.p8, pct: dev8, fmt: tys },
+      { label: "12-month forecast", plan: t.pY, big: t.eY,
+        dev: t.eY - t.pY, pct: devY, fmt: tys }
+    ];
+
+    // A KPI-widget style card: heading in plain text, the large number on the
+    // left, a pill badge with arrow and percentage beside it, and a quiet
+    // "from <plan>" caption below - the plan is not lost, but it does not
+    // compete for attention with the actual.
+    document.getElementById("cards").innerHTML = cards.map(function (c) {
+      var st = statusOf(c.pct, state.threshold);
+      return '<div class="card is-' + st + '">'
+        + '<div class="label">' + c.label + '</div>'
+        + '<div class="headline">'
+        + '<span class="big">' + c.fmt(c.big) + '</span>'
+        + '<span class="badge is-' + st + '">' + arrowOf(c.pct) + ' ' + pct(c.pct) + '</span>'
+        + '</div>'
+        + '<div class="from">from ' + c.fmt(c.plan) + ' planned'
+        + ' · ' + tysSigned(c.dev) + '</div>'
+        + '</div>';
+    }).join("");
+
+    var note = document.getElementById("note");
+    if (state.comment) {
+      note.hidden = false;
+      document.getElementById("noteText").textContent = state.comment;
+      document.getElementById("noteWhen").textContent = state.commentDate || "";
+    } else {
+      note.hidden = true;
+    }
+
+    var sel = document.getElementById("filter");
+    if (sel.options.length !== agg.deps.length + 1) {
+      sel.innerHTML = '<option value="__all__">All departments</option>'
+        + agg.deps.map(function (d) {
+            return '<option value="' + d + '">' + (D.deptEn[d] || d) + '</option>';
+          }).join("");
+      sel.value = state.filter;
+    }
+
+    drawChart();
+    drawTable(agg);
+  }
+
+  // ---- Chart ---------------------------------------------------------
+  // The plan line against the actual line (and the forecast), in money: two
+  // lines with the key point labelled. This deliberately replaced an earlier
+  // bar chart of variance - a "plan vs actual" presentation instead of
+  // "variance in %".
+  //
+  // A red/green fill of the gap by the sign of the variance was removed. With
+  // a signed fill the chart carries the same signal that is already in the
+  // card badges and in the colour of the table numbers, and beside them it
+  // read as overloaded - so only plan and actual remain.
+  // The actual line takes a neutral colour (var(--accent), not var(--clay)):
+  // clay reads as "caution/qualifier" everywhere else in this dashboard, and
+  // a red actual line conflicted with the fact that an actual is not always a
+  // problem - the status is already named in words in the card and table.
+  // The area under the actual line is a quiet neutral fill, with the line
+  // weight from the reference and no encoding of sign by colour.
+  //
+  // Two traps that are easy to reintroduce here; both were measured rather
+  // than assumed:
+  // 1. A fixed viewBox of 760x150 on a narrow screen (~330px container) gives
+  //    a scale factor of 0.43 - 10.5px labels become 4.5px, the same defect
+  //    already fixed in v2. Here the SVG is redrawn to the container's actual
+  //    width (ResizeObserver), and font-size is set in viewBox units so that
+  //    the resulting pixel size stays at no less than ~11px on a phone.
+  // 2. The axis break (see below) must sit STRICTLY inside the plot area, not
+  //    in the month-label band: the first version placed it below the bottom
+  //    gridline where it collided with "Jan" (measured by screenshot and DOM
+  //    rects).
+  var chartRO = null;
+
+  function drawChart() {
+    var box = document.getElementById("chart").parentNode;
+    var cw = box.clientWidth || 760;
+
+    var rows = state.filter === "__all__"
+      ? state.rows
+      : state.rows.filter(function (r) { return r.d === state.filter; });
+
+    var plan = [], exp = [], m, i;
+    for (m = 1; m <= 12; m++) {
+      var p = 0, e = 0;
+      rows.forEach(function (r) {
+        if (r.n === m) { p += r.p; e += (r.f !== null ? r.f : r.c); }
+      });
+      plan.push(p); exp.push(e);
+    }
+
+    // viewBox follows the container width in real pixels: with this approach
+    // 1 viewBox unit = 1 CSS pixel, so the font-size in the markup is the
+    // final visible size on any screen. The height is fixed.
+    var W = Math.max(280, Math.round(cw)), H = 150;
+    var narrow = W < 480;
+    // The left margin must fit the longest axis label in full: on a narrow
+    // screen the label drops the currency sign (quieter - the currency is
+    // already clear from the title and cards) but is still "1,552K". 44px was
+    // enough and 40 clipped the first character (measured by screenshot at
+    // 390px). 58 leaves room for five-figure thousands.
+    var L = narrow ? 58 : 54, R = 10, T = 34, B = narrow ? 22 : 26;
+    var iw = W - L - R, ih = H - T - B;
+
+    // The axis does NOT start at zero. This differs in meaning from a chart of
+    // monthly variance: there zero is the measured quantity itself (variance
+    // in %) and must not be cut. Here the axis carries absolute payroll sums
+    // (1.1-1.6M), and the chart's question is "how far have plan and actual
+    // diverged", not "what is the absolute level of payroll". Over a range
+    // starting at zero, a 2.5% gap physically occupies about 2 pixels
+    // (measured) - truncating is what makes the gap visible at all, rather
+    // than only readable as a number in the badge and the table below.
+    // The truncation must be labelled on the axis, never silent: without the
+    // bottom "from ..." label a reader would take the cut axis for a zero
+    // axis and draw a wrong conclusion about the share of the divergence.
+    var all = plan.concat(exp);
+    var dataMin = Math.min.apply(null, all);
+    var dataMax = Math.max.apply(null, all);
+    var pad = (dataMax - dataMin) * 0.6 || dataMax * 0.02;
+    var hi = dataMax + pad;
+    var lo = Math.max(0, dataMin - pad);
+    var span = hi - lo || 1;
+    var axisCut = lo > 0;
+
+    function X(i) { return L + iw * (i / 11); }
+    function Y(v) { return T + ih - ih * ((v - lo) / span); }
+
+    var s = [];
+    var fs = narrow ? 11 : 10.5;
+
+    // Gradient fill under the actual line (a bright line with a fill beneath
+    // it fading to transparent). The colour comes from the var(--accent)
+    // token rather than a hard-coded value: the accent differs between light
+    // and dark themes, and a baked-in value would fill from the wrong colour
+    // in dark mode. Transparency instead of a second colour for the same
+    // reason: it fades into whatever ground ends up beneath it.
+    s.push('<defs><linearGradient id="factGrad" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0%" stop-color="var(--accent)" stop-opacity="0.28"/>'
+      + '<stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>'
+      + '</linearGradient></defs>');
+
+    // Horizontal guides: three lines, not five - non-data stays quieter than
+    // data (Few).
+    var ticks = 3, gi;
+    for (gi = 0; gi <= ticks; gi++) {
+      var gv = lo + span * gi / ticks;
+      var gy = Y(gv).toFixed(1);
+      s.push('<line x1="' + L + '" y1="' + gy + '" x2="' + (W - R) + '" y2="' + gy
+        + '" stroke="var(--line-soft)" stroke-width="1"/>');
+      if (!narrow || gi % 3 === 0) {
+        s.push('<text x="' + (L - 8) + '" y="' + (parseFloat(gy) + 3.5)
+          + '" text-anchor="end" font-size="' + fs + '" fill="var(--ink-faint)">'
+          + tys(gv) + '</text>');
+      }
+    }
+
+    // The axis break is the standard mark for "axis does not start at zero":
+    // without it a reader could take the lowest gridline for a zero line and
+    // conclude that the plan/actual gap is the whole payroll rather than a
+    // small share of it.
+    // It used to sit at x=L-6, that is inside the Y-axis label band, exactly
+    // where the "Jan" label is centred (X(0)=L, text-anchor middle). By DOM
+    // rects the clearance was technically sufficient, but the eye still read
+    // the number, the mark and "Jan" as one run-together block. The mark now
+    // sits inside the plot, just right of the Y axis rather than in the label
+    // band to its left, so it no longer neighbours the month text.
+    if (axisCut) {
+      var zz = T + ih;
+      s.push('<g stroke="var(--ink-faint)" stroke-width="1.3" fill="none">'
+        + '<path d="M' + (L + 3) + ',' + (zz - 6) + ' l4,3 l-4,3 l4,3"/>'
+        + '</g>');
+    }
+
+    // Boundary between actual and forecast.
+    var bx = L + iw * ((D.factMonths - 1) / 11);
+    s.push('<line x1="' + bx.toFixed(1) + '" y1="' + T + '" x2="' + bx.toFixed(1)
+      + '" y2="' + (T + ih) + '" stroke="var(--line)" stroke-width="1"'
+      + ' stroke-dasharray="3 3"/>');
+    s.push('<text x="' + (bx + 5).toFixed(1) + '" y="' + (T - 10)
+      + '" font-size="' + fs + '" fill="var(--ink-faint)">forecast</text>');
+
+    // The plan is a quiet neutral line with no fill. "Plan is the ground,
+    // actual is the story": the plan is a reference quantity, not a second
+    // data series, and it should not take attention for itself.
+    //
+    // It was var(--moss) with a var(--accent-soft) fill; removed for three
+    // reasons:
+    // 1. Green in this same palette means "on plan" (cards, table). A green
+    //    plan line reads as "plan = good", though the plan is neutral.
+    // 2. A blue fill under a green line mixes families: the fill looked as if
+    //    it belonged to the actual rather than to the plan.
+    // 3. An accent colour on a reference quantity competed with the actual
+    //    for attention.
+    // var(--ink-faint) is the same grey as the gridlines and axis labels: the
+    // plan moves into the "non-data quieter than data" layer (Few), and the
+    // actual stays the only coloured line on the chart.
+    var planPts = plan.map(function (v, i) { return X(i).toFixed(1) + "," + Y(v).toFixed(1); });
+    s.push('<polyline points="' + planPts.join(" ") + '" fill="none"'
+      + ' stroke="var(--ink-faint)" stroke-width="2"/>');
+
+    // The actual is the only coloured line on the chart, var(--accent).
+    // NOT var(--clay): clay reads as "caution/qualifier" everywhere in this
+    // palette, and an actual is not always a problem - the status is already
+    // named in words in the card and the table, so the chart need not repeat
+    // the signal.
+    //
+    // Width 2, the same as the plan. It was 2.5 to be "a step more visible",
+    // which encoded the importance of the series in its width. Under IBCS
+    // width encodes the TYPE of quantity (absolute / ratio), and plan and
+    // actual are both absolute sums, so their widths must match. They are
+    // separated now by colour (grey / accent), which is exactly the
+    // distinction between a reference and a measured quantity.
+    //
+    // Solid through the last closed month, then the forecast in the same
+    // colour but dashed: measured and expected differ by stroke, not colour
+    // (IBCS notation). This is a state (actual/forecast), not plan/actual,
+    // which is why the dash appears only here.
+    var factPts = [], fcPts = [];
+    for (i = 0; i < 12; i++) {
+      var pt = X(i).toFixed(1) + "," + Y(exp[i]).toFixed(1);
+      if (i < D.factMonths) { factPts.push(pt); }
+      if (i >= D.factMonths - 1) { fcPts.push(pt); }
+    }
+    // The fill runs across the whole year, forecast included. A single band
+    // from January to December reads as one quantity, "expected payroll",
+    // rather than as two stumps.
+    //
+    // The cost of that choice: a fill adds weight to the series, and under the
+    // forecast it gives it the same weight as the measured actual. The
+    // "measured / expected" distinction now rests ONLY on the line stroke
+    // (dashed) and on the vertical boundary labelled "forecast". If on visual
+    // inspection the forecast starts reading as actual, restore the break in
+    // the fill at the factMonths boundary.
+    var areaPts = [];
+    for (i = 0; i < 12; i++) {
+      areaPts.push(X(i).toFixed(1) + "," + Y(exp[i]).toFixed(1));
+    }
+    var factArea = "M" + L + "," + Y(lo).toFixed(1)
+      + " L" + areaPts.join(" L")
+      + " L" + (W - R) + "," + Y(lo).toFixed(1) + " Z";
+    s.push('<path d="' + factArea + '" fill="url(#factGrad)"/>');
+
+    // Line above the fill: order in array s is the drawing order.
+    s.push('<polyline points="' + factPts.join(" ") + '" fill="none"'
+      + ' stroke="var(--accent)" stroke-width="2"/>');
+    if (fcPts.length > 1) {
+      s.push('<polyline points="' + fcPts.join(" ") + '" fill="none"'
+        + ' stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4"/>');
+    }
+
+    // No point markers on every month - the reference keeps a single labelled
+    // point on the line, not a row of identical circles. The label for the
+    // last closed month is a soft chip (outline plus light ground), not a
+    // solid black fill: a black chip drew the eye harder than the actual line
+    // itself, which is the chart's main signal.
+    var kx = X(D.factMonths - 1), ky = Y(exp[D.factMonths - 1]);
+    var label = tys(exp[D.factMonths - 1]);
+    var lw = 15 + label.length * 6.2;
+    var lx = Math.min(Math.max(kx - lw / 2, L), W - R - lw);
+    var ly = Math.max(ky - 28, T - 2);
+    s.push('<rect x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" width="' + lw.toFixed(1)
+      + '" height="20" rx="5" fill="var(--bg-panel)" stroke="var(--accent)" stroke-width="1.3"/>');
+    s.push('<text x="' + (lx + lw / 2).toFixed(1) + '" y="' + (ly + 14).toFixed(1)
+      + '" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--accent)">'
+      + label + '</text>');
+
+    // Month axis. On a narrow screen only every second label is drawn,
+    // otherwise 12 labels collide below W < 480.
+    for (i = 0; i < 12; i++) {
+      if (narrow && i % 2 !== 0) { continue; }
+      s.push('<text x="' + X(i).toFixed(1) + '" y="' + (H - (narrow ? 6 : 8))
+        + '" text-anchor="middle" font-size="' + fs + '" fill="var(--ink-faint)">'
+        + MONTHS[i] + '</text>');
+    }
+
+    var svg = document.getElementById("chart");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.innerHTML = s.join("");
+
+    document.getElementById("legend").innerHTML =
+      '<span><i class="sw" style="background:var(--ink-faint)"></i>plan</span>'
+      + '<span><i class="sw" style="background:var(--accent)"></i>actual</span>'
+      + '<span><i class="sw sw-fc"></i>forecast</span>';
+
+    if (!chartRO && window.ResizeObserver) {
+      chartRO = new ResizeObserver(function () { drawChart(); });
+      chartRO.observe(box);
+    }
+  }
+
+  // ---- Table ---------------------------------------------------------
+  function drawTable(agg) {
+    var lastKey = MONTHS[D.factMonths - 1];
+    var lastFull = MONTH_FULL[lastKey] || lastKey;
+
+    // The header is drawn together with the data rather than sitting static
+    // in the markup: otherwise, after a new month is loaded the labels stay
+    // from the previous one and the "August" column silently shows September.
+    // Each delta column carries a "vs plan, %" label so there is no guessing
+    // what the delta is measured against.
+    document.getElementById("thead").innerHTML =
+      '<tr>'
+      + '<th rowspan="2">Department</th>'
+      + '<th class="grp" colspan="2">' + lastFull + '</th>'
+      + '<th class="grp sep" colspan="2">' + D.factMonths + ' months (Jan–' + lastKey + ')</th>'
+      + '<th class="grp sep" colspan="2">12-month forecast</th>'
+      + '</tr><tr>'
+      + '<th>actual<span class="unit">€</span></th>'
+      + '<th>vs plan<span class="unit">%</span></th>'
+      + '<th class="sep">actual<span class="unit">€</span></th>'
+      + '<th>vs plan<span class="unit">%</span></th>'
+      + '<th class="sep">expected<span class="unit">€</span></th>'
+      + '<th>vs plan<span class="unit">%</span></th>'
+      + '</tr>';
+
+    // Two colours, not three. A yellow "watch zone" in the table coloured
+    // almost every row, and with 21 coloured numbers colour stops being a
+    // signal. Red is overspend past the threshold, green is underspend,
+    // everything else is neutral. The threshold and its half still live in
+    // the cards, where there are three numbers rather than twenty-one.
+    function cls(v) {
+      if (v >= state.threshold) return "v-err";
+      if (v < 0) return "v-ok";
+      return "";
+    }
+
+    // In-cell bars in the year column were removed: the column is already
+    // sorted by that value (stated in the table heading), so the bar repeated
+    // the sorting without adding readability, and it broke the alignment of
+    // the numbers.
+    function row(o, name, isTotal) {
+      var dAug = (o.augF - o.augP) / o.augP * 100;
+      var d8 = (o.f8 - o.p8) / o.p8 * 100;
+      var dY = (o.eY - o.pY) / o.pY * 100;
+
+      return '<tr>'
+        + '<td data-l="">' + name + '</td>'
+        + '<td data-l="' + lastKey + ', actual">' + tysBare(o.augF) + '</td>'
+        + '<td data-l="' + lastKey + ', vs plan" class="' + cls(dAug) + '">'
+        + pct(dAug) + '<span class="abs">' + tysSigned(o.augF - o.augP)
+        + '</span></td>'
+        + '<td data-l="Jan–' + lastKey + ', actual" class="sep">' + tysBare(o.f8) + '</td>'
+        + '<td data-l="Jan–' + lastKey + ', vs plan" class="' + cls(d8) + '">'
+        + pct(d8) + '<span class="abs">' + tysSigned(o.f8 - o.p8)
+        + '</span></td>'
+        + '<td data-l="Year, expected" class="sep">' + tysBare(o.eY) + '</td>'
+        + '<td data-l="Year, vs plan" class="' + cls(dY) + '">'
+        + pct(dY) + '<span class="abs">' + tysSigned(o.eY - o.pY)
+        + '</span></td>'
+        + '</tr>';
+    }
+
+    document.getElementById("tbody").innerHTML =
+      agg.perDep.map(function (o) { return row(o, o.name, false); }).join("");
+    document.getElementById("tfoot").innerHTML = row(agg.total, "Total", true);
+  }
+
+  // ---- Data update ---------------------------------------------------------
+  var msg = document.getElementById("msg");
+  var dl = document.getElementById("dl");
+
+  function say(text, bad) {
+    msg.textContent = text;
+    msg.className = "msg " + (bad ? "bad" : "ok");
+  }
+
+  var HEADER = ["department", "month", "month_no", "plan", "fact", "forecast"];
+
+  function parseCsv(text) {
+    var lines = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n").split("\n")
+      .filter(function (l) { return l.trim() !== ""; });
+    if (!lines.length) { throw new Error("file is empty"); }
+
+    var head = lines[0].split(",").map(function (h) { return h.trim(); });
+    if (head.join(",") !== HEADER.join(",")) {
+      throw new Error("header mismatch, expected " + HEADER.join(","));
+    }
+
+    var rows = [], seen = {}, i;
+    for (i = 1; i < lines.length; i++) {
+      var c = lines[i].split(",");
+      if (c.length !== 6) {
+        throw new Error("row " + (i + 1) + ": " + c.length
+          + " columns, expected 6");
+      }
+      var n = parseInt(c[2], 10);
+      if (!(n >= 1 && n <= 12)) {
+        throw new Error("row " + (i + 1) + ": month out of 1–12");
+      }
+      var p = parseFloat(c[3]);
+      if (!isFinite(p)) {
+        throw new Error("row " + (i + 1) + ": plan is not a number");
+      }
+      var f = c[4].trim() === "" ? null : parseFloat(c[4]);
+      var fc = c[5].trim() === "" ? null : parseFloat(c[5]);
+      if (f === null && fc === null) {
+        throw new Error("row " + (i + 1) + ": neither fact nor forecast set");
+      }
+      var key = c[0] + "|" + n;
+      if (seen[key]) {
+        throw new Error("duplicate: " + c[0] + ", month " + n);
+      }
+      seen[key] = 1;
+      rows.push({ d: c[0].trim(), m: c[1].trim(), n: n, p: p, f: f, c: fc });
+    }
+
+    // The last closed month is the highest one that still has an actual.
+    var factMonths = 0;
+    rows.forEach(function (r) {
+      if (r.f !== null && r.n > factMonths) { factMonths = r.n; }
+    });
+    if (!factMonths) { throw new Error("no month has a fact value"); }
+
+    var deps = {};
+    rows.forEach(function (r) { deps[r.d] = 1; });
+    var nd = Object.keys(deps).length;
+    if (rows.length !== nd * 12) {
+      throw new Error("got " + rows.length + " rows, need " + (nd * 12)
+        + " for " + nd + " departments — all 12 months required");
+    }
+
+    return { rows: rows, factMonths: factMonths, deps: nd };
+  }
+
+  document.getElementById("csv").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) { return; }
+    var fr = new FileReader();
+    fr.onload = function () {
+      try {
+        var res = parseCsv(String(fr.result));
+        state.rows = res.rows;
+        D.factMonths = res.factMonths;
+        render();
+        say("Loaded: " + res.rows.length + " rows, " + res.deps
+          + " departments, actuals through month " + res.factMonths
+          + ". Page recalculated.", false);
+        dl.disabled = false;
+      } catch (err) {
+        dl.disabled = true;
+        say("File rejected. " + err.message, true);
+      }
+    };
+    fr.onerror = function () { say("Could not read the file", true); };
+    fr.readAsText(file, "utf-8");
+  });
+
+  document.getElementById("cmt").addEventListener("input", function (e) {
+    state.comment = e.target.value.trim();
+    state.commentDate = new Date().toLocaleDateString("en-GB");
+    render();
+    dl.disabled = false;
+  });
+
+  document.getElementById("thrIn").addEventListener("input", function (e) {
+    var v = parseFloat(e.target.value);
+    if (isFinite(v) && v > 0) {
+      state.threshold = v;
+      render();
+      dl.disabled = false;
+    }
+  });
+
+  // Download: the page rewrites its own JSON and hands back a copy of
+  // itself. Updating needs neither Python nor a network - only a browser.
+  dl.addEventListener("click", function () {
+    var payload = {
+      rows: state.rows,
+      factMonths: D.factMonths,
+      threshold: state.threshold,
+      comment: state.comment,
+      commentDate: state.commentDate,
+      deptEn: D.deptEn,
+      built: new Date().toLocaleDateString("en-GB")
+    };
+    var doc = document.documentElement.cloneNode(true);
+    doc.querySelector("#payload").textContent = JSON.stringify(payload);
+    var det = doc.querySelector("details.upd");
+    if (det) { det.removeAttribute("open"); }
+    var m = doc.querySelector("#msg");
+    if (m) { m.textContent = ""; m.className = "msg"; }
+    var fileInput = doc.querySelector("#csv");
+    if (fileInput) { fileInput.removeAttribute("value"); }
+
+    var blob = new Blob(["<!doctype html>\n" + doc.outerHTML],
+      { type: "text/html;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "budget-plan-fact.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    say("File downloaded. Send that copy on — the data travels with it.", false);
+  });
+
+  document.getElementById("filter").addEventListener("change", function (e) {
+    state.filter = e.target.value;
+    drawChart();
+  });
+
+  document.getElementById("thrIn").value = state.threshold;
+  document.getElementById("cmt").value = state.comment || "";
+  render();
+})();
+</script>
+</body>
+</html>
