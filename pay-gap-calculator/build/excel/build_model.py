@@ -31,7 +31,7 @@ DEFAULTS = {
     "threshold_pct": 5,
     "implementation_month": 7,
     "rate_below": 31.5,
-    "rate_above": 1.15,
+    "rate_above": 0.96,
     "ceiling": 61214,
 }
 
@@ -117,7 +117,8 @@ def build(csv_path, out_path, title_note):
         ("rate_below", DEFAULTS["rate_below"], "Contribution rate below ceiling, %",
          "Applied to the part of the uplift that fits under the ceiling."),
         ("rate_above", DEFAULTS["rate_above"], "Contribution rate above ceiling, %",
-         "Applied to the part that pushes base pay past the ceiling."),
+         "Applied to the part that pushes base pay past the ceiling. Spain 2026: employer "
+         "share of the first band of the solidarity contribution, 0.96% of the combined 1.15%."),
         ("ceiling", DEFAULTS["ceiling"], "Contribution ceiling, EUR",
          "Annual, applied to the employee's actual base pay."),
     ]

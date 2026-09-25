@@ -584,7 +584,8 @@ def build(out_path):
         ("Employer contributions",
          "A raise to base pay brings employer contributions with it, and those are part of "
          "the budget line. The rates here are Spain 2026: 31.5% on annual pay up to a "
-         "ceiling of 61,214 EUR, and 1.15% on anything above it. The scale is regressive, "
+         "ceiling of 61,214 EUR, and 0.96% on anything above it (the employer share of the "
+         "first band of the solidarity contribution, 0.96% of the combined 1.15%). The scale is regressive, "
          "so a raise to someone already above the ceiling attracts almost no contributions "
          "while the same raise below it attracts the full rate. That is why the effective "
          "rate on the Equalisation sheet differs so much between departments. Rates and "

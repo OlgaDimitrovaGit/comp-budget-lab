@@ -19,7 +19,7 @@ computed in the tab.
 
 What it costs to close the unexplained gender pay gap, and how that cost lands on
 a budget. Minimum compliance against full equalisation, under EU Directive
-2023/970. On the demo data the two options cost €148,536 and €396,522 a year.
+2023/970. On the demo data the two options cost €148,426 and €396,245 a year.
 
 Method, input format, the Excel model and how to reproduce the numbers:
 [pay-gap-calculator/README.md](pay-gap-calculator/README.md).
@@ -34,7 +34,7 @@ there is a problem and a call is due. It answers where the budget diverges from
 plan and by how much, not why.
 
 It takes the calculator's output as its input: from September a salary
-equalisation of €396,522 a year takes effect against a plan approved before that
+equalisation of €396,245 a year takes effect against a plan approved before that
 decision.
 
 Details, input format, the Excel model and how to reproduce the numbers:

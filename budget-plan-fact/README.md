@@ -29,14 +29,14 @@ be audited. **You do not need any of it to use the dashboard or the workbook.**
 
 ## On the demo data
 
-Seven departments, twelve months, annual payroll plan €16,549,701. Actuals run
+Seven departments, twelve months, annual payroll plan €16,546,051. Actuals run
 through August; September to December are forecast.
 
 | | Plan | Expected | Deviation |
 |---|---|---|---|
-| Jan–Aug (actual) | €11,005,551 | €11,275,717 | **+€270,166** (+2.45%) |
-| Sep–Dec (forecast) | €5,544,150 | €5,812,405 | **+€268,255** (+4.84%) |
-| **Full year** | **€16,549,701** | **€17,088,122** | **+€538,421** (+3.25%) |
+| Jan–Aug (actual) | €11,003,124 | €11,273,198 | **+€270,074** (+2.45%) |
+| Sep–Dec (forecast) | €5,542,927 | €5,811,044 | **+€268,117** (+4.84%) |
+| **Full year** | **€16,546,051** | **€17,084,242** | **+€538,191** (+3.25%) |
 
 The "problem" threshold is configurable and defaults to 3%. The full-year
 variance is above it, so the dashboard signals.
@@ -47,13 +47,13 @@ Sorted worst first, which is the order the dashboard uses.
 
 | Department | Plan | Expected | Variance |
 |---|---|---|---|
-| Sales | €2,807,385 | €3,110,207 | +10.79% |
-| Manufacturing | €2,521,233 | €2,609,786 | +3.51% |
-| Legal | €857,102 | €886,131 | +3.39% |
+| Sales | €2,806,043 | €3,108,669 | +10.78% |
+| Manufacturing | €2,521,160 | €2,609,711 | +3.51% |
+| Legal | €856,702 | €885,708 | +3.39% |
 | Customer Support | €1,411,870 | €1,456,289 | +3.15% |
-| Marketing | €2,326,012 | €2,383,207 | +2.46% |
-| Operations | €2,639,115 | €2,681,228 | +1.60% |
-| Engineering | €3,986,985 | €3,961,276 | −0.64% |
+| Marketing | €2,325,426 | €2,382,606 | +2.46% |
+| Operations | €2,638,938 | €2,681,048 | +1.60% |
+| Engineering | €3,985,913 | €3,960,211 | −0.64% |
 
 Sales drives most of the overspend. Engineering is the only department below
 plan.
@@ -61,8 +61,8 @@ plan.
 ## Where the September turn comes from
 
 The plan was approved before the decision to equalise pay. From September a
-salary equalisation takes effect: €33,043 a month across 52 of 212 employees,
-€396,522 a year including employer contributions.
+salary equalisation takes effect: €33,020 a month across 52 of 212 employees,
+€396,245 a year including employer contributions.
 
 That figure is not invented here. It is the output of the first artefact in this
 repository, the [Pay Gap Remediation Cost
@@ -144,8 +144,9 @@ The figures come from a seeded generator, not from any real organisation. The
 dashboard illustrates a method; it is not financial advice.
 
 Contribution rates used in the equalisation cost are Spain 2026: 31.5% on annual
-pay up to a ceiling of €61,214 and 1.15% above it. They are specific to one
-country and one year.
+pay up to a ceiling of €61,214 and 0.96% above it (the employer share of the
+first band of the solidarity contribution, 0.96% of the combined 1.15%). They
+are specific to one country and one year.
 
 Deliberately out of scope: explaining variances, headcount planning, multiple
 currencies, and any comparison between departments beyond the size of the gap.

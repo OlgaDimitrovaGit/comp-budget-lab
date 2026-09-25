@@ -15,7 +15,7 @@ DEFAULTS = {
     "threshold_pct": 5,
     "implementation_month": 7,
     "rate_below": 31.5,
-    "rate_above": 1.15,
+    "rate_above": 0.96,
     "ceiling": 61214,
 }
 EPS = 1e-9
