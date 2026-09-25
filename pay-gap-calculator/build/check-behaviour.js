@@ -14,7 +14,7 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 /* Reference totals for the demo dataset. Any change to the calculation must
    either preserve them or be deliberately entered here — they cannot drift
    silently. */
-const EXPECT = { min: '€148,536', full: '€396,522', diff: '€247,986' };
+const EXPECT = { min: '€148,426', full: '€396,245', diff: '€247,819' };
 
 const errs = [];
 const vc = new VirtualConsole().on('jsdomError', e => errs.push(e.message));

@@ -73,7 +73,8 @@ SCENARIO = "full"
 # These are not universal constants but the parameters of one jurisdiction in one
 # year, and they are revisited whenever either changes.
 RATE_BELOW = 31.5     # % below the contribution base ceiling
-RATE_ABOVE = 1.15     # % above the ceiling (cuota de solidaridad)
+RATE_ABOVE = 0.96     # % above the ceiling: employer share of the first band
+                      # of the cuota de solidaridad (0.96% of the combined 1.15%)
 CEILING = 61214.0     # EUR per year, the contribution base ceiling
 
 # --- Target properties of the actuals ---------------------------------------

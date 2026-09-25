@@ -8,7 +8,7 @@ const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const EXPECT = { min: '€148,536', full: '€396,522', diff: '€247,986' };
+const EXPECT = { min: '€148,426', full: '€396,245', diff: '€247,819' };
 
 const errs = [];
 const dom = new JSDOM(html, {

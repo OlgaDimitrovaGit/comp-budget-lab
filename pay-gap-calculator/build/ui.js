@@ -133,7 +133,7 @@ var FIXTURE_RESULT = (function () {
       threshold_pct: 5,
       implementation_month: 7,
       rate_below: 31.5,
-      rate_above: 1.15,
+      rate_above: 0.96,
       ceiling: 61214
     }
   };
@@ -220,7 +220,7 @@ var UI = (function () {
       threshold_pct: numberFromInput('ctl-threshold', 5),
       implementation_month: Math.round(numberFromInput('ctl-month', 7)),
       rate_below: numberFromInput('ctl-rate-below', 31.5),
-      rate_above: numberFromInput('ctl-rate-above', 1.15),
+      rate_above: numberFromInput('ctl-rate-above', 0.96),
       ceiling: numberFromInput('ctl-ceiling', 61214)
     };
     if (s.implementation_month < 1) s.implementation_month = 1;
@@ -985,7 +985,7 @@ var UI = (function () {
       $('ctl-threshold').value = '5';
       $('ctl-month').value = '7';
       $('ctl-rate-below').value = '31.5';
-      $('ctl-rate-above').value = '1.15';
+      $('ctl-rate-above').value = '0.96';
       $('ctl-ceiling').value = '61214';
       recompute();
     });

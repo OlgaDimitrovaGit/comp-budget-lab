@@ -760,9 +760,10 @@ footer p { margin-bottom: 0.35rem; }
 
         <div class="ctl">
           <label for="ctl-rate-above">Employer rate above ceiling, %</label>
-          <input id="ctl-rate-above" type="number" step="0.01" min="0" max="100" value="1.15"
+          <input id="ctl-rate-above" type="number" step="0.01" min="0" max="100" value="0.96"
                  inputmode="decimal">
-          <span class="jur">Spain 2026, solidarity contribution, first band.</span>
+          <span class="jur">Spain 2026, employer share of the first band of the solidarity
+            contribution: 0.96% of the combined 1.15%.</span>
         </div>
 
         <div class="ctl">
@@ -958,7 +959,8 @@ share_i     = shortfall_i / Σ shortfall</div>
           consequence: in high-paid categories equalisation costs less than intuition suggests,
           because the part of the raise above the ceiling does not carry full contributions.</p>
         <p class="small muted">Only the first band of the Spanish solidarity contribution is
-          modelled. The recipients of adjustments sit below the median of their category, so they
+          modelled, at the employer's share: 0.96% of the combined 1.15% rate (the employee
+          pays the remaining 0.19%). The recipients of adjustments sit below the median of their category, so they
           are overwhelmingly below the ceiling or just above it; modelling all three bands would
           complicate the formula for an effect on a handful of employees.</p>
 

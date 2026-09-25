@@ -116,8 +116,8 @@ def verify(rows):
     # 1. The year agrees with the generator's reference figures. Hard-coded on
     # purpose: if the dataset is rebuilt differently, the page has to say so
     # rather than quietly show different numbers.
-    REF_PLAN_YEAR = 16549701.43
-    REF_EXP_YEAR = 17088122.21
+    REF_PLAN_YEAR = 16546051.16
+    REF_EXP_YEAR = 17084242.07
     if abs(plan_year - REF_PLAN_YEAR) > 0.01:
         failures.append(
             f"annual plan {plan_year:,.2f} != reference {REF_PLAN_YEAR:,.2f}")

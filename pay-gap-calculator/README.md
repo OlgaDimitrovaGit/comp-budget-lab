@@ -30,8 +30,8 @@ do not need any of it to use the calculator or the workbook.**
 | | Minimum compliance | Full equalisation | Difference |
 |---|---|---|---|
 | Base pay adjustment | €126,315 | €335,191 | €208,876 |
-| Employer contributions | €22,221 | €61,331 | €39,110 |
-| **Total** | **€148,536** | **€396,522** | **€247,986** |
+| Employer contributions | €22,111 | €61,054 | €38,943 |
+| **Total** | **€148,426** | **€396,245** | **€247,819** |
 | Payroll uplift | 1.14% | 3.04% | 1.90% |
 
 Contribution rates and the ceiling are Spain 2026 defaults and are editable in
