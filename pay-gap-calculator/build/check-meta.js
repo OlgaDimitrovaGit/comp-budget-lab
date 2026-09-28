@@ -79,4 +79,6 @@ const PAGE = 'file:///' + path.resolve(__dirname, '..', 'index.html')
   console.log('');
   console.log('network requests:', requests.length ? requests.join('; ') : 'none');
   await b.close();
+  // The page promises that data never leaves the tab; a request must fail the check.
+  if (requests.length) process.exit(1);
 })().catch(e => { console.error(e); process.exit(1); });
