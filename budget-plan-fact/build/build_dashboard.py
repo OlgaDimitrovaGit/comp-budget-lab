@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Builds the dashboard page: data, comment and palette are inlined into a single
-self-contained HTML file.
+Embeds data and comment into the page, after checking the data. Called by
+lovable/build.py, which has already inlined the styles and the chart; the
+result is a single self-contained HTML file.
 
 The page has to open without an internet connection and make no network request
-of any kind: no fonts, no libraries, no analytics. So the chart is drawn as
-inline SVG, the palette is copied in as a :root block, and the dataset is placed
-in a <script type="application/json"> inside the file itself.
+of any kind: no fonts, no libraries, no analytics. So the styles and the chart
+script are inline, the palette is a :root block in the page, and the dataset is
+placed in a <script type="application/json"> inside the file itself.
 
 Updating the data does not go through this script: the CSV is loaded in the
 browser, recalculated in place, and the page hands back a new file just as
@@ -20,11 +21,6 @@ import sys
 import datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# The palette lives next to the build. It used to be read from a shared working
-# file outside the repository, which meant this script could not run for anyone
-# who had only cloned the repository.
-TOKENS = os.path.join(HERE, "palette.css")
-
 FACT_MONTHS = 8
 SIGNAL_THRESHOLD = 3.0   # % — the "problem" threshold, configurable on the page
 
@@ -54,46 +50,6 @@ def read_comment():
     if not os.path.exists(path):
         return ""
     return " ".join(open(path, encoding="utf-8").read().split())
-
-
-def extract_palette():
-    """Takes the :root block from palette.css.
-
-    The values are never retyped: there is one source of truth, and a copy
-    entered by hand drifts from it silently. All three blocks are taken - light,
-    system dark, and the manual toggle.
-    """
-    css = open(TOKENS, encoding="utf-8").read()
-    # Drop the header comment: it explains how to use the palette, which the
-    # reader of the page does not need.
-    start = css.index(":root {")
-    block = css[start:]
-    # Strip every CSS comment as well. tokens.css is a working file: beside each
-    # value it carries the reasoning for choosing it, in Russian, addressed to
-    # whoever maintains the palette. That is process, not artefact, and it has
-    # no business in a published page - it shipped 87 lines of internal notes
-    # into the previous build. The values stay, the commentary does not.
-    out = []
-    i = 0
-    while i < len(block):
-        j = block.find("/*", i)
-        if j == -1:
-            out.append(block[i:])
-            break
-        out.append(block[i:j])
-        k = block.find("*/", j + 2)
-        if k == -1:
-            break
-        i = k + 2
-    block = "".join(out)
-    # Collapse the blank lines the removed comments leave behind.
-    lines = [ln.rstrip() for ln in block.split("\n")]
-    cleaned = []
-    for ln in lines:
-        if ln.strip() == "" and cleaned and cleaned[-1].strip() == "":
-            continue
-        cleaned.append(ln)
-    return "\n".join(cleaned).strip() + "\n"
 
 
 def verify(rows):
@@ -185,7 +141,11 @@ def build(template_name="template.html", out_name="dashboard.html"):
         "built": datetime.date.today().strftime("%d/%m/%Y"),
     }
 
-    html = read_template(template_name).replace("/*PALETTE*/", extract_palette())
+    html = read_template(template_name)
+    # The bare template has no styles and no chart yet: those are inlined by
+    # lovable/build.py, which is the entry point.
+    if "/*LOVABLE_CSS*/" in html:
+        sys.exit("template has no styles inlined: run python build/lovable/build.py")
     html = html.replace('"__DATA__"', json.dumps(payload, ensure_ascii=False))
 
     out = os.path.join(HERE, out_name)

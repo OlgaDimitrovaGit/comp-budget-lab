@@ -103,15 +103,20 @@ deviation, eight-month plan and eight-month actual. No formula errors.
 ## Files
 
 ```
-index.html                          the dashboard, self-contained, no dependencies
+index.html                          the dashboard, self-contained, no network requests
 budget-plan-fact-model.xlsx         the same model in Excel, live formulas
 sample.csv                          two-department example of the input format
 README.md                           this file
 
 build/                              sources and checks - not needed to use the tool
-  template.html                     markup, styles and logic
-  build_dashboard.py                embeds data and palette into the page
-  palette.css                       the palette the page is built with
+  template.html                     markup and page logic (calculation, CSV, threshold)
+  build_dashboard.py                checks the data and embeds it into the page
+  lovable/                          styles and chart, inlined into the page at build
+    styles.css                      Tailwind 4 stylesheet: palette, both themes, components
+    chart.jsx                       the monthly chart (React + Recharts)
+    build.py                        compiles both, inlines them, calls build_dashboard.py
+    package.json, package-lock.json the pinned toolchain (npm ci)
+    vite.config.js, entry.js        bundle settings
   generate_dataset.py               the seeded dataset generator, with its checks
   budget-plan-fact.csv              the demo dataset, 7 departments x 12 months
   department-deviation.csv          per-department deviation, input to the generator and the model
@@ -121,9 +126,12 @@ build/                              sources and checks - not needed to use the t
   comment.txt                       the comment baked into the published build
 ```
 
-The dashboard is generated. Edit `build/template.html` and run
-`python build/build_dashboard.py`, which writes `dashboard.html` next to the
-template; that file is what ships as `index.html`.
+The dashboard is generated. Edit `build/template.html` or `build/lovable/`
+and run `python build/lovable/build.py`, which writes `dashboard.html` next to
+the template; that file is what ships as `index.html`. The look comes from a
+design prototyped in Lovable; the calculation is the page's own script and does
+not depend on it. React and Recharts are bundled into the page, so it still
+loads nothing from the network.
 
 ## Reproducing the numbers
 
@@ -131,7 +139,8 @@ template; that file is what ships as `index.html`.
 python build/generate_dataset.py          # writes budget-plan-fact.csv, runs 11 checks
 python build/build_model.py               # writes budget-plan-fact-model.xlsx
 powershell -File build/recalc_model.ps1   # recalculates it and verifies against the CSV
-python build/build_dashboard.py           # writes build/dashboard.html
+cd build/lovable && npm ci && cd ../..   # once: Node 20+, installs the toolchain
+python build/lovable/build.py             # writes build/dashboard.html
 ```
 
 The generator is seeded, so it reproduces the same CSV byte for byte. The checks
