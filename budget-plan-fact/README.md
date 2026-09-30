@@ -127,8 +127,8 @@ build/                              sources and checks - not needed to use the t
 ```
 
 The dashboard is generated. Edit `build/template.html` or `build/lovable/`
-and run `python build/lovable/build.py`, which writes `dashboard.html` next to
-the template; that file is what ships as `index.html`. The look comes from a
+and run `python build/lovable/build.py`, which writes `index.html`, the page
+that ships. The look comes from a
 design prototyped in Lovable; the calculation is the page's own script and does
 not depend on it. React and Recharts are bundled into the page, so it still
 loads nothing from the network.
@@ -140,7 +140,7 @@ python build/generate_dataset.py          # writes budget-plan-fact.csv, runs 11
 python build/build_model.py               # writes budget-plan-fact-model.xlsx
 powershell -File build/recalc_model.ps1   # recalculates it and verifies against the CSV
 cd build/lovable && npm ci && cd ../..   # once: Node 20+, installs the toolchain
-python build/lovable/build.py             # writes build/dashboard.html
+python build/lovable/build.py             # writes index.html
 ```
 
 The generator is seeded, so it reproduces the same CSV byte for byte. The checks

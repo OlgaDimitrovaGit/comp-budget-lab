@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds the dashboard page: build/dashboard.html, shipped as index.html.
+"""Builds the dashboard page straight into index.html, the file that ships.
 
   cd build/lovable && npm ci      # once: Tailwind, Vite, React, Recharts
   python build/lovable/build.py
@@ -57,7 +57,9 @@ def main():
 
     sys.path.insert(0, str(BUILD))
     import build_dashboard
-    build_dashboard.build(os.path.relpath(GEN, BUILD), "dashboard.html")
+    # Written straight to the published page: a copy in build/ would be a
+    # second 680 KB file that drifts from index.html by the build date.
+    build_dashboard.build(os.path.relpath(GEN, BUILD), os.path.join("..", "index.html"))
 
 
 if __name__ == "__main__":
