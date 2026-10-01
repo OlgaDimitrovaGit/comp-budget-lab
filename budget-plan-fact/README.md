@@ -124,6 +124,7 @@ build/                              sources and checks - not needed to use the t
   build_model.py                    builds the Excel workbook from the CSV
   recalc_model.ps1                  recalculates the workbook and checks it against the CSV
   comment.txt                       the comment baked into the published build
+  check-network.js                  no network request on load or after a CSV is picked
 ```
 
 The dashboard is generated. Edit `build/template.html` or `build/lovable/`
@@ -141,11 +142,16 @@ python build/build_model.py               # writes budget-plan-fact-model.xlsx
 powershell -File build/recalc_model.ps1   # recalculates it and verifies against the CSV
 cd build/lovable && npm ci && cd ../..   # once: Node 20+, installs the toolchain
 python build/lovable/build.py             # writes index.html
+node build/check-network.js               # fails on any request, on load or after upload
 ```
 
 The generator is seeded, so it reproduces the same CSV byte for byte. The checks
 in each script exit non-zero on a mismatch rather than printing a report and
 passing.
+
+`check-network.js` needs `puppeteer-core` and a local Chrome. It picks
+`sample.csv` through the page's file input, so a request triggered by the
+first upload fails the check too, not only one made while the page loads.
 
 ## Limits
 

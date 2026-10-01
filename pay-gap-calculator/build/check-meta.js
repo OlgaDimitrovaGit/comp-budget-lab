@@ -77,7 +77,31 @@ const PAGE = 'file:///' + path.resolve(__dirname, '..', 'index.html')
   console.log('  rows      :', d.sampleRows);
   console.log('  header    :', d.sampleHeader);
   console.log('');
-  console.log('network requests:', requests.length ? requests.join('; ') : 'none');
+  console.log('network requests (load):', requests.length ? requests.join('; ') : 'none');
+
+  // Loading is only half of the promise: anything wired to the first upload
+  // (a lazy parser, a beacon) would slip past a load-only check. Pick the
+  // sample CSV through the real file input and keep listening.
+  const loadCount = requests.length;
+  if (d.sampleIsDataUri) {
+    const os = require('os'), fs = require('fs');
+    const tmp = path.join(os.tmpdir(), 'pay-gap-sample.csv');
+    const csv = await p.evaluate(() => atob(document.getElementById('sample-csv')
+      .getAttribute('href').split(',')[1]));
+    fs.writeFileSync(tmp, csv);
+    const input = await p.$('#csv-input');
+    if (!input) { console.error('csv input MISSING'); process.exit(1); }
+    await input.uploadFile(tmp);
+    await p.waitForNetworkIdle({ idleTime: 500 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 1000));
+    fs.unlinkSync(tmp);
+    // A pick that the page ignored would make "no requests" meaningless.
+    const msg = await p.$eval('#csv-messages', el => el.textContent.trim());
+    console.log('csv messages:', msg || 'NONE — upload not processed');
+    if (!msg) process.exit(1);
+    const after = requests.slice(loadCount);
+    console.log('network requests (after CSV pick):', after.length ? after.join('; ') : 'none');
+  }
   await b.close();
   // The page promises that data never leaves the tab; a request must fail the check.
   if (requests.length) process.exit(1);

@@ -90,7 +90,7 @@ build/                              sources and checks - not needed to use the t
   bundle.py                         assembles the four into index.html
   check-behaviour.js                behaviour of the page under input
   check-render.js                   what the page renders
-  check-meta.js                     metadata, and that no network request is made
+  check-meta.js                     metadata, and no network request on load or after a CSV is picked
   check-legibility.js               type sizes and contrast
   check-visual.js                   screenshots, both themes
   check-constants.js                reconciles the defaults across every file holding them
