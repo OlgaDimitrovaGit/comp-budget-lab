@@ -66,7 +66,7 @@ var CALC = (function () {
    * rather than an input column, and the regression has to recover it.
    *
    *   base_salary = base_category
-   *               × (1 + GRADE_STEP)^(grade − 1)      ~12% per grade
+   *               × (1 + GRADE_STEP)^(grade − lowest grade of the category)
    *               × (1 + TENURE_STEP × tenure_years)  ~1.5% per year of service
    *               × (1 + noise)
    *               × (1 + gap coefficient for women)
@@ -85,9 +85,10 @@ var CALC = (function () {
   var TENURE_STEP = 0.015; // +1.5% of salary per year of service
 
   /* Seven categories. Fields:
-   *   base            — salary at grade 1 with zero tenure, EUR
+   *   base            — salary at the category's lowest grade with zero tenure, EUR
    *   n               — headcount
-   *   grades          — [min, max] available grades
+   *   grades          — [min, max] grades on one company-wide ladder (1–12,
+   *                     higher number = more senior); 1–2 are not used here
    *   share_f         — share of women
    *   female_grade_bias — shift of the women's distribution across grades:
    *                       0 = even, 1 = women strictly in the lower grades
@@ -103,7 +104,7 @@ var CALC = (function () {
       // Women are spread across grades exactly as men are (bias 0), but at
       // equal grade and tenure they are paid about 8% less. The regression
       // explains almost none of it — this is a pure unexplained residual.
-      name: 'Engineering', base: 46000, n: 44, grades: [1, 6], share_f: 0.34,
+      name: 'Engineering', base: 46000, n: 44, grades: [7, 12], share_f: 0.34,
       female_grade_bias: 0.00, gap_within_grade: 0.075,
       var_rate_m: 0.12, var_rate_f: 0.12, noise: 0.055, part_time_share: 0.02
     },
@@ -113,7 +114,7 @@ var CALC = (function () {
       // The regression should explain nearly all of it: explained ≈ raw_gap.
       // HETEROGENEITY 5 (in part): this category also has the widest tenure
       // range, so the tenure-pay link shows up in the tenure coefficient.
-      name: 'Operations', base: 38000, n: 38, grades: [1, 6], share_f: 0.55,
+      name: 'Operations', base: 38000, n: 38, grades: [5, 10], share_f: 0.55,
       female_grade_bias: 0.80, gap_within_grade: 0.010,
       var_rate_m: 0.08, var_rate_f: 0.08, noise: 0.050, part_time_share: 0.05
     },
@@ -122,7 +123,7 @@ var CALC = (function () {
       // Exercises the unreliable flag: n < 10, or either gender below 3. The
       // gap is large but the sample cannot carry a decision — and the tool has
       // to say so.
-      name: 'Legal', base: 62000, n: 8, grades: [3, 6], share_f: 0.375,
+      name: 'Legal', base: 62000, n: 8, grades: [9, 12], share_f: 0.375,
       female_grade_bias: 0.35, gap_within_grade: 0.090,
       var_rate_m: 0.15, var_rate_f: 0.15, noise: 0.045, part_time_share: 0.00
     },
@@ -131,7 +132,7 @@ var CALC = (function () {
       // plus women in the higher grades). reverse_gap = true: the category is
       // NOT adjusted in either scenario but still appears in the result — the
       // tool does not hide what it does not treat.
-      name: 'Marketing', base: 42000, n: 26, grades: [1, 5], share_f: 0.50,
+      name: 'Marketing', base: 42000, n: 26, grades: [6, 10], share_f: 0.50,
       female_grade_bias: -0.35, gap_within_grade: -0.040,
       var_rate_m: 0.10, var_rate_f: 0.10, noise: 0.050, part_time_share: 0.08
     },
@@ -139,7 +140,7 @@ var CALC = (function () {
       // HETEROGENEITY 5: the TENURE-pay link is strongest here — tenure runs to
       // 22 years and is the main source of variation.
       // Plus a moderate within-grade gap.
-      name: 'Manufacturing', base: 34000, n: 40, grades: [1, 5], share_f: 0.40,
+      name: 'Manufacturing', base: 34000, n: 40, grades: [4, 8], share_f: 0.40,
       female_grade_bias: 0.30, gap_within_grade: 0.065,
       var_rate_m: 0.06, var_rate_f: 0.06, noise: 0.045,
       part_time_share: 0.05, tenure_max: 22
@@ -150,7 +151,7 @@ var CALC = (function () {
       // these people would falsely look underpaid and the budget would be
       // overstated. Their cost is converted back into actual money: an uplift
       // on a 0.5 FTE contract costs the company half.
-      name: 'Customer Support', base: 30000, n: 30, grades: [1, 4], share_f: 0.60,
+      name: 'Customer Support', base: 30000, n: 30, grades: [3, 6], share_f: 0.60,
       female_grade_bias: 0.40, gap_within_grade: 0.070,
       var_rate_m: 0.05, var_rate_f: 0.05, noise: 0.040, part_time_share: 0.33
     },
@@ -163,7 +164,7 @@ var CALC = (function () {
       // It also holds the highest salaries: part of the category sits ABOVE the
       // 61,214 EUR contribution ceiling, which brings the rate_above band into
       // play.
-      name: 'Sales', base: 55000, n: 26, grades: [2, 6], share_f: 0.50,
+      name: 'Sales', base: 55000, n: 26, grades: [8, 12], share_f: 0.50,
       female_grade_bias: 0.00, gap_within_grade: 0.000, flat_salary: true,
       paired_structure: true,
       var_rate_m: 0.26, var_rate_f: 0.13, noise: 0.000, part_time_share: 0.00

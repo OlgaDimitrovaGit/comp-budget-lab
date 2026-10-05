@@ -340,7 +340,7 @@ def build(csv_path, out_path, title_note):
         "Sum_gt", "Sum_gy", "Sum_ty", "Sum_yy", "det",                  # BG-BK
     ]
     CHDR = CHDR_CAT   # the same value: Data references this layout
-    header(cs, CHDR, ccols, [18, 10, 7, 7] + [12] * (len(ccols) - 4))
+    header(cs, CHDR, ccols, [18, 10, 7, 7] + [12] * (len(ccols) - 15) + [20] * 11)
     cs.freeze_panes = "B%d" % (CHDR + 1)
 
     D = "Data!"
