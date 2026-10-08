@@ -40,6 +40,19 @@ decision.
 Details, input format, the Excel model and how to reproduce the numbers:
 [budget-plan-fact/README.md](budget-plan-fact/README.md).
 
+### [Salary review: budget and outcome](merit-matrix-calculator/)
+
+**[Open the calculator](https://olgadimitrovagit.github.io/comp-budget-lab/merit-matrix-calculator/)**
+
+A merit matrix and salary review cost calculator. Pay equity first, then merit
+person by person: who gets how much, what the review costs this year and in next
+year's budget, and whether it opens the gender pay gap again. On the demo data
+the review costs €1,119,187 a year with bonus and employer contributions,
+€839,390 of it in 2027.
+
+Method, input format, the Excel model and how to reproduce the numbers:
+[merit-matrix-calculator/README.md](merit-matrix-calculator/README.md).
+
 ## Layout
 
 Each artefact is a folder of its own, with the same shape. **Nothing needs to be
@@ -55,8 +68,11 @@ spreadsheet.
 <artefact>/build/        sources, demo data and checks - not needed to use the tool
 ```
 
-`index.html` in each folder is generated from the sources in its `build/`; the
-build command is in that artefact's README. The `index.html` at the repository
+The salary review calculator differs: its workbook and sample files sit in
+`build/`, where the page links to them, and the page sources in `page/`.
+
+`index.html` in each folder is generated from its sources; the build command is
+in that artefact's README. The `index.html` at the repository
 root is a redirect: the calculator was published there before it moved into a
 folder, and the link is already in circulation.
 
