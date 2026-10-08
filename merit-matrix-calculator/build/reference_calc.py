@@ -7,8 +7,15 @@ full equalisation) follows the Pay Gap Remediation Cost Calculator; step 2 is
 target-based merit (target compa-ratio by rating).
 """
 import csv
+import os
 import sys
 from datetime import date
+
+# the demo files and the workbook sit in the artefact folder, one level up
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+SAMPLE_EMPLOYEES = os.path.join(ROOT, "sample-employees.csv")
+SAMPLE_RANGES = os.path.join(ROOT, "sample-salary-ranges.csv")
+MODEL = os.path.join(ROOT, "merit-model.xlsx")
 
 DEFAULTS = {
     "effective_date": date(2027, 4, 1),
@@ -222,8 +229,8 @@ def analyse(emp, bands, S=None):
 
 
 if __name__ == "__main__":
-    src = sys.argv[1] if len(sys.argv) > 1 else "demo-data.csv"
-    bnd = sys.argv[2] if len(sys.argv) > 2 else "demo-bands.csv"
+    src = sys.argv[1] if len(sys.argv) > 1 else SAMPLE_EMPLOYEES
+    bnd = sys.argv[2] if len(sys.argv) > 2 else SAMPLE_RANGES
     r = analyse(load(src), load_bands(bnd))
     for e in r["emp"]:
         print("%s up1=%9.2f aligned=%9.2f CR=%.4f elig=%d inc=%9.2f zone=%d" % (

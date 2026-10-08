@@ -68,8 +68,9 @@ spreadsheet.
 <artefact>/build/        sources, demo data and checks - not needed to use the tool
 ```
 
-The salary review calculator differs: its workbook and sample files sit in
-`build/`, where the page links to them, and the page sources in `page/`.
+The salary review calculator takes two input files, so it has two samples,
+`sample-employees.csv` and `sample-salary-ranges.csv`, and keeps its page
+sources in `page/`.
 
 `index.html` in each folder is generated from its sources; the build command is
 in that artefact's README. The `index.html` at the repository
