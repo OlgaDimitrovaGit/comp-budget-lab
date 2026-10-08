@@ -11,11 +11,11 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-// The pay gap calculator's engine: beside this folder in the published repository,
-// one level deeper in the working copy
-const CALC = require(['../../pay-gap-calculator/build/calc.js',
-  '../../PROJECT-pay-gap-calculator/pay-gap-calculator/build/calc.js']
-  .map(f => path.join(__dirname, f)).find(f => fs.existsSync(f)));
+// The pay gap calculator's engine: pay-gap-calculator/build/calc.js in a folder next to this
+// artefact's folder, or in a subfolder of one
+const ROOT = path.join(__dirname, '..', '..');
+const CALC = require([ROOT, ...fs.readdirSync(ROOT).map(d => path.join(ROOT, d))]
+  .map(d => path.join(d, 'pay-gap-calculator', 'build', 'calc.js')).find(f => fs.existsSync(f)));
 
 const EFF = Date.UTC(2027, 3, 1);      // review effective date, 2027-04-01 (= DEFAULTS in reference_calc.py)
 const LAST_CYCLE = '2026-04-01';       // previous annual review
