@@ -113,9 +113,11 @@ node make_demo.js                          # demo CSV files
 python build_model.py                      # writes merit-model.xlsx
 ```
 
-`build_model.py` writes formulas only. Open the workbook in Excel and let it
-recalculate before running `python check_model.py`. Every check exits non-zero
-on a mismatch.
+The workbook in the repository is already recalculated, so `python
+check_model.py` (run inside `build/`) checks it as it is. A workbook rebuilt by
+`build_model.py` holds formulas without values: open it in Excel, let it
+recalculate and save before running the check. Every check exits non-zero on a
+mismatch.
 
 ## Limits
 
