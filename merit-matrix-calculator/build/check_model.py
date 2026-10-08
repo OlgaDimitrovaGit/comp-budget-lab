@@ -9,11 +9,11 @@ import sys
 
 from openpyxl import load_workbook
 
-from reference_calc import analyse, load, load_bands
+from reference_calc import MODEL, SAMPLE_EMPLOYEES, SAMPLE_RANGES, analyse, load, load_bands
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else "demo-data.csv"
-BANDS = sys.argv[2] if len(sys.argv) > 2 else "demo-bands.csv"
-XLSX = sys.argv[3] if len(sys.argv) > 3 else "merit-model.xlsx"
+SRC = sys.argv[1] if len(sys.argv) > 1 else SAMPLE_EMPLOYEES
+BANDS = sys.argv[2] if len(sys.argv) > 2 else SAMPLE_RANGES
+XLSX = sys.argv[3] if len(sys.argv) > 3 else MODEL
 
 wb = load_workbook(XLSX, data_only=True)
 fail = 0

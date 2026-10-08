@@ -17,8 +17,8 @@ If you would rather work in a spreadsheet:
 
 | | |
 |---|---|
-| **[build/merit-model.xlsx](build/merit-model.xlsx)** | the same calculation in Excel, live formulas, one row per employee. It holds the demo data and the default parameters. |
-| **[build/demo-data.csv](build/demo-data.csv)**, **[build/demo-bands.csv](build/demo-bands.csv)** | the input format, filled in: employees and salary ranges. The page offers the same two files for download. |
+| **[merit-model.xlsx](merit-model.xlsx)** | the same calculation in Excel, live formulas, one row per employee. It holds the demo data and the default parameters. |
+| **[sample-employees.csv](sample-employees.csv)**, **[sample-salary-ranges.csv](sample-salary-ranges.csv)** | the input format, filled in: employees and salary ranges. The page offers the same two files for download. |
 
 ## On the demo data
 
@@ -82,19 +82,17 @@ equity and the gap check.
 
 ```
 index.html                  the calculator, self-contained, no dependencies
+merit-model.xlsx            the same calculation in Excel, live formulas
+sample-employees.csv        212 simulated employees: the input format, filled in
+sample-salary-ranges.csv    their salary ranges
 README.md                   this file
 
 build/                      the model and the reference calculation
   reference_calc.py         the calculation in Python, the reference everything is checked against
-  build_model.py            builds merit-model.xlsx from the demo CSV files
+  build_model.py            builds merit-model.xlsx from the sample CSV files
   check_model.py            checks the recalculated workbook against reference_calc.py
   dump_reference.py         runs reference_calc.py on scenarios, for the page checks
-  make_demo.js              writes the demo data (needs ../pay-gap-calculator/build/calc.js)
-  merit-model.xlsx          the Excel model
-  demo-data.csv             212 simulated employees
-  demo-bands.csv            their salary ranges
-  mini-data.csv             a 12-person set used by the checks
-  mini-bands.csv            its salary ranges
+  make_demo.js              writes the sample CSV files (needs ../pay-gap-calculator/build/calc.js)
 
 page/                       sources of index.html (React, Vite)
   src/engine.js             the page's calculation, a line-by-line port of reference_calc.py
@@ -109,8 +107,8 @@ cd page && npm install && npm run build   # writes ../index.html; fails on any e
 node check-engine.mjs                      # page engine against the Python reference
 python check-page.py                       # needs Playwright
 cd ../build
-node make_demo.js                          # demo CSV files
-python build_model.py                      # writes merit-model.xlsx
+node make_demo.js                          # writes ../sample-*.csv
+python build_model.py                      # writes ../merit-model.xlsx
 ```
 
 The workbook in the repository is already recalculated, so `python

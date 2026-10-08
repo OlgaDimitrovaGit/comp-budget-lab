@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import { analyse, DEFAULTS, loadBands, loadEmployees, parseCsv, shape } from './engine.js';
-import demoEmployees from '../../build/demo-data.csv?raw';
-import demoBands from '../../build/demo-bands.csv?raw';
+import demoEmployees from '../../sample-employees.csv?raw';
+import demoBands from '../../sample-salary-ranges.csv?raw';
 
 export { demoEmployees, demoBands };
 export type Data = ReturnType<typeof shape>;

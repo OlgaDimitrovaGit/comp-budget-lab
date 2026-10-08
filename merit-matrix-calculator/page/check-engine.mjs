@@ -1,5 +1,5 @@
 // Checks the page engine against build/reference_calc.py — the reference the Excel
-// model is checked against — on the demo and the mini set under several settings.
+// model is checked against — on the demo and on a small subset of it under several settings.
 // Exit 1 on any difference above a cent (money) or 1e-6 (percent, compa-ratio).
 //   node check-engine.mjs            all scenarios
 //   node check-engine.mjs --selftest proves the check can fail
@@ -12,22 +12,28 @@ import { analyse, loadBands, loadEmployees, parseCsv } from './src/engine.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BUILD = join(HERE, '..', 'build');
+const ROOT = join(HERE, '..');
 const selftest = process.argv.includes('--selftest');
+const dir = mkdtempSync(join(tmpdir(), 'merit-check-'));
+
+// a small file of the reader's size: every eighth employee of the demo
+const demoRows = readFileSync(join(ROOT, 'sample-employees.csv'), 'utf8').trim().split(/\r?\n/);
+writeFileSync(join(dir, 'subset-employees.csv'), [demoRows[0], ...demoRows.slice(1).filter((_, i) => i % 8 === 0)].join('\n') + '\n');
+const DATA = join(ROOT, 'sample-employees.csv'), BANDS = join(ROOT, 'sample-salary-ranges.csv');
 
 const SCENARIOS = [
-  { name: 'demo, defaults', data: 'demo-data.csv', bands: 'demo-bands.csv', settings: {} },
-  { name: 'demo, January, no cap, no clip, 3%', data: 'demo-data.csv', bands: 'demo-bands.csv',
+  { name: 'demo, defaults', data: DATA, bands: BANDS, settings: {} },
+  { name: 'demo, January, no cap, no clip, 3%', data: DATA, bands: BANDS,
     settings: { effective: { year: 2027, month: 1 }, max_increase: null, clip_at_max: false, pool_pct: 3 } },
-  { name: 'demo, Dec 2028, no eligibility limits, policy 105%, own ratings', data: 'demo-data.csv', bands: 'demo-bands.csv',
+  { name: 'demo, Dec 2028, no eligibility limits, policy 105%, own ratings', data: DATA, bands: BANDS,
     settings: { effective: { year: 2028, month: 12 }, min_months_hire: 0, min_months_change: 0, company_target: 1.05,
       ratings: { 1: [0, 0], 2: [0.9, 0], 3: [1.0, 0.01], 4: [1.08, 0.02], 5: [1.15, 0.03] }, max_increase: 0.1 } },
-  { name: 'demo, Nov 2026, other contributions', data: 'demo-data.csv', bands: 'demo-bands.csv',
+  { name: 'demo, Nov 2026, other contributions', data: DATA, bands: BANDS,
     settings: { effective: { year: 2026, month: 11 }, rate_below: 28, ceiling: 50000,
       above_ceiling: [[1.1, 0], [1.5, 0.5], [null, 2]], min_months_hire: 1, min_months_change: 1 } },
-  { name: 'mini, defaults', data: 'mini-data.csv', bands: 'mini-bands.csv', settings: {} },
+  { name: 'subset, defaults', data: join(dir, 'subset-employees.csv'), bands: BANDS, settings: {} },
 ];
 
-const dir = mkdtempSync(join(tmpdir(), 'merit-check-'));
 writeFileSync(join(dir, 's.json'), JSON.stringify(SCENARIOS));
 const ref = JSON.parse(execFileSync('python', [join(BUILD, 'dump_reference.py'), join(dir, 's.json')], { encoding: 'utf8' }));
 
@@ -40,8 +46,8 @@ function same(where, a, b, tol) {
 
 SCENARIOS.forEach((sc, i) => {
   const R = ref[i];
-  const { emp, hasCategory, hasGender } = loadEmployees(parseCsv(readFileSync(join(BUILD, sc.data), 'utf8')));
-  const bands = loadBands(parseCsv(readFileSync(join(BUILD, sc.bands), 'utf8')));
+  const { emp, hasCategory, hasGender } = loadEmployees(parseCsv(readFileSync(sc.data, 'utf8')));
+  const bands = loadBands(parseCsv(readFileSync(sc.bands, 'utf8')));
   const settings = selftest && i === 0 ? { ...sc.settings, rate_below: 32.16 } : sc.settings;
   const r = analyse(emp, bands, settings, { hasCategory, hasGender });
   const p = sc.name + ' · ';

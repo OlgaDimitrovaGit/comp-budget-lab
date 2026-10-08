@@ -1,12 +1,13 @@
 /*
- * Builds the full demo for the Merit Matrix workbook: demo-data.csv and demo-bands.csv.
+ * Builds the full demo for the Merit Matrix workbook: ../sample-employees.csv and
+ * ../sample-salary-ranges.csv.
  *
  * Employees are the ~200 people of the Pay Gap Remediation Cost Calculator
  * demo (same seeded generator, same base pay). This script only adds what a
  * merit review needs and that generator does not have: a rating, hire and
  * last-change dates, and salary ranges per category and grade.
  *
- *   node make_demo.js            -> writes demo-data.csv and demo-bands.csv
+ *   node make_demo.js            -> writes ../sample-employees.csv and ../sample-salary-ranges.csv
  */
 'use strict';
 const fs = require('fs');
@@ -129,11 +130,11 @@ for (const g of ['F', 'M']) {
 const late = people.filter(p => p.hire_date > DATA_DATE || p.last_change_date > DATA_DATE);
 if (late.length) throw new Error(`dates after ${DATA_DATE}: ${late.map(p => p.id).join(', ')}`);
 
-const dir = __dirname;
+const dir = path.join(__dirname, '..');
 const head = ['id', 'category', 'gender', 'grade', 'rating', 'hire_date', 'last_change_date', 'base_salary', 'bonus_pct', 'fte'];
-fs.writeFileSync(path.join(dir, 'demo-data.csv'),
+fs.writeFileSync(path.join(dir, 'sample-employees.csv'),
   [head.join(',')].concat(people.map(p => head.map(h => p[h]).join(','))).join('\n') + '\n');
-fs.writeFileSync(path.join(dir, 'demo-bands.csv'),
+fs.writeFileSync(path.join(dir, 'sample-salary-ranges.csv'),
   ['category,grade,min,mid,max'].concat(bands.map(b => [b.category, b.grade, b.min, b.mid, b.max].join(','))).join('\n') + '\n');
 
 // Where people sit against their range (before pay equity)
@@ -147,5 +148,5 @@ for (const p of people) {
 }
 crs.sort((x, y) => x - y);
 const q = f => crs[Math.floor(crs.length * f)].toFixed(2);
-console.log(`written demo-data.csv (${people.length}) and demo-bands.csv (${bands.length}); ` +
+console.log(`written sample-employees.csv (${people.length}) and sample-salary-ranges.csv (${bands.length}); ` +
   `CR P10 ${q(0.1)} median ${q(0.5)} P90 ${q(0.9)}; below min ${below}, above max ${above}`);

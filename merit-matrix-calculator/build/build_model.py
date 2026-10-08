@@ -17,11 +17,11 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.workbook.defined_name import DefinedName
 
-from reference_calc import DEFAULTS, load_bands, parse_date
+from reference_calc import DEFAULTS, MODEL, SAMPLE_EMPLOYEES, SAMPLE_RANGES, load_bands, parse_date
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else "demo-data.csv"
-BANDS = sys.argv[2] if len(sys.argv) > 2 else "demo-bands.csv"
-OUT = sys.argv[3] if len(sys.argv) > 3 else "merit-model.xlsx"
+SRC = sys.argv[1] if len(sys.argv) > 1 else SAMPLE_EMPLOYEES
+BANDS = sys.argv[2] if len(sys.argv) > 2 else SAMPLE_RANGES
+OUT = sys.argv[3] if len(sys.argv) > 3 else MODEL
 
 INPUT = PatternFill("solid", fgColor="FFF4CC")
 AMBER = PatternFill("solid", start_color="FFC000", end_color="FFC000")
