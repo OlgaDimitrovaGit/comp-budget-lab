@@ -7,10 +7,11 @@ import { Field } from './review-shared';
 const csvHref = (text: string) => `data:text/csv;charset=utf-8,${encodeURIComponent(text)}`;
 function method(y: number) {
  return [
-  { title: 'Pay equity', items: [
-   'In each category where women are paid less, we close the part of the gap that grade and tenure do not explain. The money goes to women below the category median, in proportion to how far below it they are. It is paid on top of the target merit increase.',
+  { title: 'Pay equity reserve', items: [
+   'The reserve is the cost of closing in full, in each category where women are paid less, the part of the gap that grade and tenure do not explain: what it takes if every case is confirmed. Unexplained by this model does not mean unjustified: review each case before any adjustment.',
+   'For the estimate, the money is spread over women below the category median, in proportion to how far below it they are. The reserve is a separate budget on top of the target merit increase; it is not paid from the merit budget.',
    'The gap compares mean pay of women and men: base pay plus bonus, full-time equivalent. The unexplained gap is what is left after differences in grade and tenure, estimated within the category. The explained part is kept between zero and the raw gap, so where grade and tenure explain all of it, the table shows 0.0%. Minus: women are paid less. In a category of fewer than 10 people, one person can shift the % a lot.',
-   'After pay equity the unexplained gap is zero wherever women were paid less: the step pays out the gap measured now. If you measure it again on the new pay, a small remainder can show. After merit we measure it again. Where women are paid more, the pay equity step pays nothing.',
+   'After pay equity the unexplained gap is zero wherever women were paid less: the reserve covers the gap measured now. If you measure it again on the new pay, a small remainder can show. After merit we measure it again. Where women are paid more, the reserve is zero.',
    'The part explained by grade and tenure stays. By itself it is not a justification under Art. 10(1)(b): the employer still has to show that grades and pay for tenure rest on objective, gender-neutral criteria.',
   ] },
   { title: 'Merit', items: [
