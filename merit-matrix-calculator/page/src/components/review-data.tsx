@@ -40,16 +40,16 @@ export function ReviewData({open,onToggle,source,demo,setSource,params,setParams
  async function load(files:FileList|null){
   if(!files||!files.length)return;setError(false);
   try{
-   const next={...source};const names:string[]=[];let ownEmployees=false;
+   const next={...source};const names:string[]=[];let ownEmployees=false;let bandsLoaded=false;
    for(const file of Array.from(files)){
     if(file.size>10*1024*1024)throw new Error(`${file.name}: choose a CSV smaller than 10 MB.`);
     const text=await file.text();const head=(parseCsv(text)[0]??[]).map(h=>h.trim().toLowerCase());
-    if(head.includes('mid')&&head.includes('max'))next.bands=text;
+    if(head.includes('mid')&&head.includes('max')){next.bands=text;bandsLoaded=true;}
     else if(head.includes('base_salary')){next.employees=text;ownEmployees=true;}
     else throw new Error(`${file.name}: not an employee file (base_salary column) or a salary ranges file (mid and max columns). Use the sample CSVs for the expected format.`);
     names.push(file.name);
    }
-   if(ownEmployees&&next.bands===demo.bands)throw new Error('Load your salary ranges file together with the employee file: select both files at once.');
+   if(ownEmployees&&!bandsLoaded&&next.bands===demo.bands)throw new Error('Load your salary ranges file together with the employee file: select both files at once.');
    next.name=names.join(' + ');
    const settings=toSettings(params);
    const result=settings?compute(next,settings):null;
