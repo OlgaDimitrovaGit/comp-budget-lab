@@ -32,7 +32,7 @@ export function Waterfall() {
  const full = inYear+rest;
  const steps = [
   {name:'Current payroll',short:['Current','payroll'],amount:current,kind:'total',start:0,end:current},
-  {name:`Pay equity, ${p.span}`,short:['Pay equity'],amount:eq,kind:'equity',start:current,end:current+eq},
+  {name:`Pay equity reserve, ${p.span}`,short:['Pay equity','reserve'],amount:eq,kind:'equity',start:current,end:current+eq},
   {name:'After pay equity',short:['After pay','equity'],amount:current+eq,kind:'total',start:0,end:current+eq},
   {name:`Merit, ${p.span}`,short:['Merit'],amount:merit,kind:'merit',start:current+eq,end:inYear},
   {name:`${p.year} payroll`,short:[String(p.year),'payroll'],amount:inYear,kind:'total',start:0,end:inYear},
@@ -45,8 +45,8 @@ export function Waterfall() {
  // phone: the same seven bars, narrower, so the chart fits the screen without scrolling
  const g = narrow ? {w:332,x0:20,step:46.5,bar:30,brk:2} : {w:800,x0:34,step:112,bar:60,brk:15};
  const value=(s:typeof steps[number])=>s.kind==='equity'&&!data.equity_on?(narrow?'n/a':'not calculated'):`${s.kind==='total'?'':'+'}${million(s.amount)}`;
- const label=(s:typeof steps[number])=>narrow&&s.short.length===1&&s.kind==='equity'?['Pay','equity']:s.short;
- return <section className="section waterfall-section"><div className="section-head"><div><h2>Payroll growth in {p.year}{" "}and{" "}{p.next}, from the review date</h2></div><Detail>Payroll includes base pay, bonus and employer contributions. Pay equity and merit count from the review month: {p.span}, {p.monthsText}. Full-year effect: the same increases for the rest of a full year. {p.next} payroll: current payroll plus this review over 12 months. A {p.next} review is not included.</Detail></div>
+ const label=(s:typeof steps[number])=>narrow&&s.kind==='equity'?['Equity','reserve']:s.short;
+ return <section className="section waterfall-section"><div className="section-head"><div><h2>Payroll growth in {p.year}{" "}and{" "}{p.next}, from the review date</h2></div><Detail>Payroll includes base pay, bonus and employer contributions. The pay equity reserve and merit count from the review month: {p.span}, {p.monthsText}. Full-year effect: the same increases for the rest of a full year. {p.next} payroll: current payroll plus this review over 12 months. A {p.next} review is not included.</Detail></div>
  <div className="chart-surface">
  <div className="waterfall-scroll"><svg className={`waterfall ${narrow?'narrow':''}`} viewBox={`0 22 ${g.w} 261`} aria-label={`Waterfall showing payroll increasing from ${million(current)} to ${million(inYear)} in ${p.year} and ${million(full)} in ${p.next}`} role="img">
  <line className="chart-base" x1={g.brk-1} x2={g.w-2} y1="225" y2="225"/>
@@ -58,7 +58,7 @@ export function Waterfall() {
  <text className="bar-value" textAnchor="middle" x={c} y={end-9}>{value(s)}</text>
  {label(s).map((l,j)=><text key={l} className="bar-label" textAnchor="middle" x={c} y={246+j*12}>{l}</text>)}
  </g>;})}</svg></div>
- </div></section>;
+ </div>{data.equity_on&&<p className="table-notes">The pay equity reserve and merit are two separate budgets: the reserve is not paid from the merit budget. Without a gender column in your file, the page shows the merit budget alone.</p>}</section>;
 }
 export function MeritMatrix() {
  const data = useData();
