@@ -146,6 +146,16 @@ with sync_playwright() as pw:
     check("employee file alone on demo ranges: refused", kpis(p)[0] == m(demo["total"]))
     check("demo restored", kpis(p)[0] == m(demo["total"]))
 
+    # own employees with the unchanged sample ranges, both chosen at once: accepted
+    inp.set_input_files([str(SUBSET), str(RANGES)])
+    try:
+        p.wait_for_function(f"document.querySelector('.source-label').innerText.includes('{subset['n']} employees')", timeout=5000)
+        ok = not p.query_selector(".import-result.error")
+    except Exception:
+        ok = False
+    check("employee file with the unchanged sample ranges: accepted", ok)
+    p.get_by_role("button", name="Back to demo data").click()
+
     # 390 px after loading files: long file names must not widen the page
     ph = b.new_page(viewport={"width": 390, "height": 844})
     ph.on("request", lambda r: requests.append(r.url) if not r.url.startswith(("file:", "data:", "blob:")) else None)
