@@ -17,7 +17,7 @@ If you would rather work in a spreadsheet:
 
 | | |
 |---|---|
-| **[merit-model.xlsx](merit-model.xlsx)** | the same calculation in Excel, live formulas, one row per employee. It holds the demo data and the default parameters. |
+| **[merit-model.xlsx](merit-model.xlsx)** | the same calculation in Excel, live formulas, one row per employee. It holds the demo data and the default parameters. To run your own staff, paste them on the Employees sheet and your ranges on Bands, in the columns of the sample CSV files: the formulas cover up to 2,000 employees and 500 range rows, and the Categories sheet fills in from your data. |
 | **[sample-employees.csv](sample-employees.csv)**, **[sample-salary-ranges.csv](sample-salary-ranges.csv)** | the input format, filled in: employees and salary ranges. The page offers the same two files for download. |
 
 ## On the demo data

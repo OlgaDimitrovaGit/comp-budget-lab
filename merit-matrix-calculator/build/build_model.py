@@ -206,7 +206,10 @@ for c in wb_b[1]:
 for i, ((cat, g), (mn, md, mx)) in enumerate(load_bands(BANDS).items()):
     r = 2 + i
     wb_b.append([cat, g, mn, md, mx, f'=A{r}&"|"&B{r}'])
-for row in wb_b.iter_rows(min_row=2, max_col=5):
+CAP_BANDS = max(500, wb_b.max_row - 1)
+for r in range(wb_b.max_row + 1, CAP_BANDS + 2):
+    wb_b.cell(r, 6, f'=IF(A{r}="","",A{r}&"|"&B{r})')
+for row in wb_b.iter_rows(min_row=2, max_row=CAP_BANDS + 1, max_col=5):
     for c in row:
         c.fill = INPUT
     for c in row[2:]:
@@ -227,14 +230,17 @@ for r in rows:
     we.append([r["id"], r["category"], r["gender"], int(r["grade"]), int(r["rating"]),
                parse_date(r["hire_date"]), parse_date(r["last_change_date"]),
                float(r["base_salary"]), float(r["bonus_pct"]), float(r["fte"])])
-for row in we.iter_rows(min_row=2):
+N = len(rows)
+# Room for your own staff: Calc, Bands and Categories carry formulas for more rows
+# than the demo has. A row with no ID (or no category) stays blank and adds nothing.
+CAP_EMP = max(2000, N)
+for row in we.iter_rows(min_row=2, max_row=CAP_EMP + 1, max_col=len(cols)):
     for c in row:
         c.fill = INPUT
     row[5].number_format = row[6].number_format = DATE
     row[7].number_format = EUR
 for col, w in zip("ABCDEFGHIJ", (8, 22, 8, 7, 7, 12, 16, 13, 10, 6)):
     we.column_dimensions[col].width = w
-N = len(rows)
 
 # ---------------------------------------------------------------- Calc
 def EMP(field):
@@ -251,7 +257,9 @@ CONTRIB = ("=RateBelow*MIN({x},Ceiling)+AboveCeilingTier1*MIN(MAX(0,{x}-Ceiling)
 CALC = [
     ("Step 0: Input", [
         ("n", "No.", "0", "=ROW()-4", "Row number in the list.", ""),
-        ("id", "ID", None, "=INDEX(Employees!$A:$A,{n}+1)", "The n-th ID on Employees.", ""),
+        ("id", "ID", None, '=IF(INDEX(Employees!$A:$A,{n}+1)="","",INDEX(Employees!$A:$A,{n}+1))',
+         "The n-th ID on Employees. Blank when the list is shorter: the whole row then stays blank.",
+         ""),
         ("cat", "Category", None, EMP("category"), "Category of workers (same work or work of equal value); looked up by ID.", ""),
         ("gen", "Gender", None, EMP("gender"), "F or M.", ""),
         ("grade", "Grade", "0", EMP("grade"), "", ""),
@@ -367,6 +375,11 @@ CALC = [
         ("gy2", "grade×cash after merit", "0.00", "={grade}*{ta2}", "Helper sums for the regression after merit on Categories.", ""),
         ("ty2", "tenure×cash after merit", "0.00", "={ten}*{ta2}", "", ""),
     ]),
+    ("Helper: list of categories", [
+        ("clist", "Category list no.", "0", '=IF(COUNTIF({U_cat},{cat})=1,MAX({A_clist})+1,"")',
+         "Numbers each category where it first appears; the Categories sheet lists them in this order.",
+         ""),
+    ]),
 ]
 
 wc = wb.create_sheet("Calc")
@@ -390,10 +403,14 @@ for step, items in CALC:
         note2(wc, 3, ci, ru)
         wc.cell(4, ci, header).font = BOLD
         wc.cell(4, ci).alignment = WRAP
-        for i in range(N):
+        if key not in ("n", "id"):
+            tmpl = '=IF({id}="","",' + tmpl[1:] + ")"
+        for i in range(CAP_EMP):
             r = DATA0 + i
             refs = {k: f"{v}{r}" for k, v in col_of.items()}
             refs.update({"C_" + k: f"${v}:${v}" for k, v in col_of.items()})
+            refs.update({"U_" + k: f"${v}${DATA0}:{v}{r}" for k, v in col_of.items()})
+            refs.update({"A_" + k: f"${v}${DATA0 - 1}:{v}{r - 1}" for k, v in col_of.items()})
             c = wc.cell(r, ci, tmpl.format(**refs))
             if fmt:
                 c.number_format = fmt
@@ -404,7 +421,7 @@ if any(item[5] for _, items in CALC for item in items):
     wc.row_dimensions[3].height = 75
 wc.freeze_panes = "B5"
 L = col_of["ovmax1"]
-wc.conditional_formatting.add(f"{L}{DATA0}:{L}{DATA0 + N - 1}", CellIsRule(operator="equal", formula=["1"], fill=AMBER))
+wc.conditional_formatting.add(f"{L}{DATA0}:{L}{DATA0 + CAP_EMP - 1}", CellIsRule(operator="equal", formula=["1"], fill=AMBER))
 
 
 def CC(key):
@@ -420,9 +437,11 @@ for r in rows:
     if r["category"] not in cats:
         cats.append(r["category"])
 A = "$A{r}"
+CAP_CATS = max(60, len(cats))
 CAT_COLS = [
     ("Pay equity per category: unexplained gap closed in full", [
-        ("name", "Category", None, None, "Type your categories here.", ""),
+        ("name", "Category", None, None, "Filled in from Employees, in the order each category first appears.",
+         ""),
         ("n", "Headcount", "0", f"=COUNTIFS({CC('cat')},{A})", "", ""),
         ("nf", "Women", "0", f'=COUNTIFS({CC("cat")},{A},{CC("gen")},"F")', "", ""),
         ("nm", "Men", "0", f'=COUNTIFS({CC("cat")},{A},{CC("gen")},"M")', "", ""),
@@ -511,15 +530,15 @@ for step, items in CAT_COLS:
         note2(wk, 3, ci, ru)
         wk.cell(4, ci, header).font = BOLD
         wk.cell(4, ci).alignment = WRAP
-        for i, cat in enumerate(cats):
+        for i in range(CAP_CATS):
             r = DATA0 + i
             if tmpl is None:
-                c = wk.cell(r, ci, cat)
-                c.fill = INPUT
+                c = wk.cell(r, ci, f'=IFERROR(INDEX({CC("cat")},MATCH({i + 1},{CC("clist")},0)),"")')
             else:
                 refs = {k: f"{v}{r}" for k, v in kcol.items()}
                 refs["r"] = r
-                c = wk.cell(r, ci, tmpl.replace("$A{r}", f"$A{r}").format(**refs))
+                f = tmpl.replace("$A{r}", f"$A{r}").format(**refs)
+                c = wk.cell(r, ci, f'=IF($A{r}="","",{f[1:]})')
             if fmt:
                 c.number_format = fmt
         wk.column_dimensions[get_column_letter(ci)].width = 14
