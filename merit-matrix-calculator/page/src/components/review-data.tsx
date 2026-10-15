@@ -26,7 +26,7 @@ function method(y: number) {
    `12 months ${y + 1}: this review over a full year. A ${y + 1} review is not included.`,
   ] },
   { title: 'Assumptions', items: [
-   'All € amounts include bonus and employer contributions.',
+   'Budget and cost figures include bonus and employer contributions. Amounts labelled "on base pay" do not.',
    `Employer contributions: Spain 2026 (Orden PJC/297/2026; LGSS additional provision 61), permanent contract and office-work AT/EP rate, applied unchanged to ${y} and ${y + 1}. Spain is raising the MEI rate until 2029 and the ceiling every year; later changes are not modelled.`,
    'Salary ranges are assumed to be current. Collective agreements are not modelled.',
   ] },
