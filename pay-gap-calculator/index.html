@@ -10,16 +10,19 @@
      Open the Network tab: it stays empty. That is the point of the tool. -->
 
 <!-- Metadata, so a shared link renders as a card rather than a bare URL.
-     og:image is deliberately absent: an image would have to be embedded as a
-     data URI, and no scraper reads those — a missing image degrades to a
-     text card, whereas a broken remote one would break the zero-request rule. -->
+     og:image is read only by link-preview scrapers; the browser never fetches
+     it, so the page itself still makes zero requests. -->
 <meta name="description" content="What it costs to close the unexplained gender pay gap under the EU Pay Transparency Directive: minimum compliance or full equalisation. Free, runs in your browser.">
 <meta name="author" content="Olga Dimitrova">
 <meta property="og:type" content="website">
 <meta property="og:title" content="EU Pay Transparency Directive: Cost-to-Close Pay Gap Calculator">
 <meta property="og:description" content="Minimum compliance or full equalisation: what each one costs, and what the choice between them costs. Load your own CSV; nothing leaves the tab.">
+<meta property="og:url" content="https://olgadimitrovagit.github.io/comp-budget-lab/pay-gap-calculator/">
+<meta property="og:image" content="https://olgadimitrovagit.github.io/comp-budget-lab/pay-gap-calculator/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
 <meta property="og:locale" content="en_GB">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="license" href="https://creativecommons.org/licenses/by/4.0/">
 <style>
 :root {
