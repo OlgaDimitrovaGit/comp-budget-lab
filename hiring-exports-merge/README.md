@@ -94,19 +94,12 @@ or a format is wrong, the script stops and names the setting to change.
 A median on four or five roles is a rough figure. Use two years of history
 where you have it, and check grades with few roles by hand.
 
-## Demo data and checks
+## Demo data
 
-The three files in `demo/` are simulated by `make_demo_data.py` with a fixed
-seed, so every run writes the same files. The time to start it uses (35, 45, 55,
-70 and 90 days for G1 to G5, about a month from request to posting) is
-illustrative, not a market figure.
-
-`python check_merge.py` regenerates the demo, runs the merge and compares it
-with the expected result written into the check. It then runs the merge on
-edited copies: a renamed column, a settings file saved by Excel with a
-semicolon and a Windows code page, a request number used twice, a second date format in one column,
-dates where day and month can't be told apart. Each must give the demo result
-or a clear stop. It exits 1 on any mismatch.
+The three files in `demo/` are simulated, not real people. The time to start
+behind them (35, 45, 55, 70 and 90 days for G1 to G5, about a month from
+request to posting) is illustrative, not a market figure. Run the script on
+them first: you should get the summary shown above.
 
 ## Licence
 
