@@ -1,0 +1,17 @@
+sep=,
+export,setting,your value,what to write
+requests,file,requests.csv,file name of the manager request log
+requests,request number,Request No,column header
+requests,request date,Requested on,column header
+requests,grade,Grade,"column header; G4, 4 and Grade 4 all read as G4"
+requests,department,Department,column header
+requests,date format,auto,"auto, or the format: DD.MM.YYYY, MM/DD/YYYY, YYYY-MM-DD, YYYY-MM-DDThh:mm:ssZ"
+ats,file,ats.csv,file name of the applicant tracking export
+ats,requisition number,requisition_id,column header
+ats,posting date,posted_at,column header
+ats,date format,auto,auto or the format
+hris,file,hris.csv,file name of the HR system export
+hris,employee id,Employee ID,column header
+hris,requisition number,Position Ref,column header
+hris,start date,Hire Date,column header
+hris,date format,auto,auto or the format

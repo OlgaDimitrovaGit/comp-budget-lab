@@ -53,6 +53,14 @@ the review costs €1,119,187 a year with bonus and employer contributions,
 Method, input format, the Excel model and how to reproduce the numbers:
 [merit-matrix-calculator/README.md](merit-matrix-calculator/README.md).
 
+### [Hiring exports merge](hiring-exports-merge/)
+
+A short Python script, not a page. It joins three hiring exports that rarely
+agree (the manager request log, the applicant tracking system and the HR
+system) into one table of time to start per requisition, with medians by grade.
+Plain Python 3, nothing to install:
+[hiring-exports-merge/README.md](hiring-exports-merge/README.md).
+
 ## Layout
 
 Each artefact is a folder of its own, with the same shape. **Nothing needs to be
