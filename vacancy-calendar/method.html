@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vacancy calendar: how the numbers are built, step by step</title>
+<meta name="description" content="How the vacancy calendar is calculated: realistic start dates, moves within the payroll target, 2028 carry-over.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f6f2; --card: #ffffff; --ink: #1d1f22; --muted: #5d636b;
+    --line: #dddad2; --accent: #1f5f8b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a; --card: #1e2125; --ink: #ecebe7; --muted: #a3a9b1;
+      --line: #33373d; --accent: #7fb6dd;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 20px; }
+  .back { font-size: 15px; margin: 0 0 24px; }
+  a { color: var(--accent); }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 16px; }
+  h2 { font-size: 21px; line-height: 1.3; margin: 36px 0 10px; }
+  p, ul, ol { margin: 0 0 14px; }
+  li { margin-bottom: 4px; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0; }
+  code {
+    font: 14px/1.4 ui-monospace, Consolas, monospace;
+    background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px;
+  }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 0 0 14px; }
+  pre code { border: 0; padding: 0; background: none; }
+  .table { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; background: var(--card); font-size: 15px; font-variant-numeric: tabular-nums; min-width: 100%; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  footer { max-width: 760px; margin: 0 auto; padding: 16px 20px 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  footer a { color: inherit; }
+  @media (max-width: 480px) { h1 { font-size: 25px; } h2 { font-size: 19px; } table { font-size: 14px; } }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="./">Open the dashboard</a></p>
+<h1>Vacancy calendar: how the numbers are built, step by step</h1>
+<p>It's a familiar, unglamorous task. Managers submit hiring requests with "everyone from January". Finance prices them at full annual cost and sees an overrun. But nobody starts on January 1: the request has to be approved, the vacancy filled, and the candidate has to serve notice at their current job. So the hiring budget comes out inflated. And the requests don't show that in 2028 these same people will cost a full year.</p>
+<p>We'll follow one role through every step. <strong>P0002:</strong> senior specialist, grade G14, People department. Base salary €51,500, target bonus 15%, requested for January 2027. No candidate yet, not a project role.</p>
+<p>All figures below belong to a demo company: about 1,700 employees, 240 open roles (+14% headcount), current headcount payroll €130M, 2027 payroll target €137.3M. Both payroll and the target include employer social contributions. The data is simulated.</p>
+<hr>
+<h2>Step 1. Full annual cost of a role</h2>
+<p>Base salary plus bonus plus employer contributions:</p>
+<ul><li>salary × (1 + bonus) = 51,500 × 1.15 = <strong>€59,225</strong>;</li><li>employer contributions: 32.15% × 59,225 = <strong>€19,040.84</strong>;</li><li>total per year <strong>€78,265.84</strong>, per month <strong>€6,522.15</strong>.</li></ul>
+<p>Contributions use one combined rate. The default is Spain 2026: 32.15% on pay up to a cap of €61,214.40 a year. For another country, change the rate and the cap on the Inputs sheet. If there is no cap, leave the cell empty.</p>
+<h2>Step 2. Budget "as requested"</h2>
+<p>The month in the request is the month the manager wants the person at work. For a project role it is the project launch month. Each role is paid from that month. P0002 is requested for January: 12 months, €78,265.84.</p>
+<p>In the demo nearly every request says "from January", which is how managers usually file them. Only project roles and 4 regular roles ask for a later month.</p>
+<p>Across all 240 roles that comes to <strong>€16.78M</strong>. With current payroll that is €146.78M against a target of €137.3M: an <strong>overrun of €9.48M</strong>.</p>
+<h2>Step 3. Time to approve the request</h2>
+<p>The budget year opens on January 1, and no hiring starts before that. So a role starts in the requested month only if there is time to approve the request and find the person by then. If there isn't, it starts as soon as that work can be done, counting from January 1.</p>
+<p>Approval time comes from the company's own hiring history: the median days from request to posted vacancy, by grade. For G14 it is 24 days, so P0002 is posted on January 25.</p>
+<p>The 15th of the month rule applies here too: someone who starts after the 15th is paid from the following month. P0002 moves to February: 11 months, €71,743.68.</p>
+<p>Across all roles this step takes off <strong>€1.15M</strong>.</p>
+<p>&gt; If a grade has fewer than 3 filled vacancies in the history, its median &gt; can't be trusted and a default is used instead. You can see and change &gt; the default on the Inputs sheet.</p>
+<h2>Step 4. Time until the person starts</h2>
+<p>Next, the median from posted vacancy to start date, by grade: search, offer, notice period. For G14 it is 57 days, so P0002 starts on March 23. That is after the 15th again, so pay starts in April: 9 months, €58,699.38.</p>
+<p>Across all roles this step takes off <strong>€2.53M</strong>. It is the largest step: search takes longer than approval.</p>
+<p>Here is what a later request looks like. P0003, a head of function at G18, is requested for February. Even starting on January 1, approval and search at G18 put the start date at May 14, paid from May: 8 months instead of 11. A request for September with the same timings would start in September and save nothing.</p>
+<p>The timing table covers the full 25 grade scale, even though the demo only uses even grades from G10 to G18. Where a grade has too little history, approval defaults to 30 days, and the search time of an odd grade sits halfway between the defaults of its even neighbours; grades below G10 and above G18 take the nearest one. Put your own hiring history on the History sheet and the timings recalculate. If your scale is different, rename the grades directly in the table.</p>
+<h2>Step 5. Candidates already in the pipeline</h2>
+<p>If a candidate already exists, steps 3 and 4 don't apply: the date is known more precisely.</p>
+<ul><li><strong>Interviewing:</strong> start 40 days after the plan date (15.12.2026), that is January 24, paid from February.</li><li><strong>Offer sent:</strong> start in 20 days, January 4, paid from January.</li><li><strong>Offer accepted:</strong> the agreed start date.</li></ul>
+<p>The 40 and 20 days, like the plan date, are set on the Inputs sheet.</p>
+<p>The demo has 18 such roles; this step takes off <strong>€0.07M</strong>.</p>
+<h2>Step 6. Project launch date</h2>
+<p>A project role doesn't start before its project launches, however fast it is filled. The start date is never earlier than the launch date.</p>
+<p>The demo has 38 such roles and the step takes off <strong>€0</strong>: their requests already sit on the launch month, and steps 3 and 4 don't overtake it. The step is there in case your file requests a role before its project launches.</p>
+<h3>Steps 2 to 6 together: the realistic budget</h3>
+<p>If every role is filled, hiring in 2027 costs <strong>€13.03M</strong> instead of €16.78M. With current payroll that is €143.03M, still €5.73M over the target.</p>
+<h3>Roles not filled and leavers</h3>
+<p>Two more effects make the forecast realistic.</p>
+<ul><li><strong>Not every vacancy gets filled in the year.</strong> A role that already has a candidate counts in full. For the rest the model takes a fill rate, 90% by default: the cost of each such role is multiplied by 0.9. In the demo that takes off <strong>€1.19M</strong>. P0002 has no candidate, so its 2027 cost is 0.9 × €58,699.38 = €52,829.44. A role not filled in 2027 has to be approved again for the 2028 budget.</li><li><strong>Current staff leave, and their seats stay empty for a while.</strong> Attrition 10% a year, a seat empty for 2 months on average: 130M × 10% × 2/12 = <strong>−€2.17M</strong>. Replacement hires are not in the request file; they fill the seat at the same cost, so only the empty months count.</li></ul>
+<p>Both rates are set on the Inputs sheet. The defaults are illustrative: put in your company's own figures.</p>
+<p>The realistic forecast is <strong>€139.67M</strong>: current staff net of leavers €127.83M plus new hires €11.84M. That is an <strong>overrun of €2.37M</strong>.</p>
+<p>So there are three numbers: "as requested" €146.78M, the realistic forecast €139.67M, and the target €137.3M. Of the first gap, €7.10M, hiring timelines close €3.74M (steps 3 to 5), unfilled roles and leavers €3.36M. The remaining €2.37M is for step 7.</p>
+<h2>Step 7. Which start dates to defer to meet the target</h2>
+<p>Here the question is reversed: which start dates to defer to meet the target. The rules:</p>
+<ol><li><strong>Which roles can be deferred.</strong> Roles with no candidate, not project roles, and not flagged as critical in the file. Critical roles are never deferred. In the demo 165 of 240 roles qualify.</li><li><strong>In what order.</strong> Most expensive per month first: a month's delay on an expensive role saves more. The same amount is covered with fewer people and fewer conversations with managers.</li><li><strong>By how much.</strong> By as many whole months as it takes to close the rest of the gap, but no more than 3 and no more than the months left in 2027. The 3-month limit is set on the Inputs sheet.</li></ol>
+<p>Example: P0003 starts in May at realistic dates and costs €11,498 a month. Deferring it 3 months, to August, saves €34,495 if the role is filled. The forecast already counts it at 90%, so the saving in the forecast is 90% of that too: €31,046.</p>
+<p>In total <strong>121 roles are deferred by 363 months</strong>, which is <strong>€2.38M</strong>. 2027 ends at €137.30M, €3,374 under the target. 121 of the 165 eligible roles are deferred, all by the full 3 months: the gap is close to the most that deferrals can deliver.</p>
+<p>&gt; Deferrals may not be enough. If the gap is larger than all possible &gt; deferrals can cover (€2.83M in the demo), the verdict says so: deferrals &gt; can't close it, and the next step is to agree which roles to cut. The model won't bend &gt; its rules to make the number fit.</p>
+<p>The list of deferrals on the Plan sheet is ready to take to a manager: which role, by how many months, and what it saves.</p>
+<h2>Step 8. What carries into 2028</h2>
+<p>In 2028, the people hired in 2027 cost <strong>€16.48M</strong>: the full annual cost of everyone expected to start, at the same fill rate. €9.46M of that is already in the 2027 budget after deferrals; <strong>€7.02M is growth</strong>, the carry-over (annualisation): the months not paid in 2027 because people didn't start in January. In the demo no role starts only in 2028.</p>
+<p>&gt; Deferrals save money in 2027 only. In 2028 these people cost a full year &gt; anyway, so the 2028 figure is the same with or without deferrals. We show it &gt; up front so the €2.38M saving isn't mistaken for a permanent one.</p>
+<h2>Step 9. By department and by month</h2>
+<ul><li><strong>By department:</strong> number of roles, how many of them are deferred, the three 2027 budgets and the full-year cost. It shows which department needs the conversation most.</li><li><strong>By month</strong> (Excel only): the cost of hiring in each month of 2027, as three lines: "as requested", "realistic" and "after deferrals".</li></ul>
+<p>Each step above is its own column on the Plan sheet, built from live formulas. Change the rate, the timings or the target and the whole model recalculates. In variance rows a minus is a saving (green) and a plus is growth (red).</p>
+<h2>Step 10. Checking that everything adds up</h2>
+<p>The calculation is done twice, in Python and in Excel formulas. The check compares every figure to the cent and fails on any difference.</p>
+<ul><li><strong>240 demo roles:</strong> 1,611 figures match.</li><li><strong>A 4,000-role file</strong> passes the same check, including the "deferrals aren't enough" case.</li></ul>
+<hr>
+<h2>What the model doesn't do</h2>
+<ul><li><strong>No salary indexation in 2028:</strong> the 2028 figure uses 2027 salaries, no new roles and the same contribution rates.</li><li><strong>No breakdown of contributions by type:</strong> one combined rate. 2027 uses the 2026 rates, and the solidarity contribution on pay above the cap is left out, so contributions are slightly understated.</li><li><strong>No company-specific attrition or fill rate:</strong> 10%, 2 months and 90% are illustrative defaults. Leavers are counted on the whole current payroll, not by department.</li><li><strong>It doesn't decide which roles to cut</strong> if deferrals aren't enough: that is a conversation with managers. The model only shows how much is missing.</li></ul>
+</main>
+<footer>
+  Olga Dimitrova · <a href="https://www.linkedin.com/in/olga-dimitrova-04311742a/">LinkedIn</a> ·
+  <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · Simulated demo data.
+</footer>
+</body>
+</html>

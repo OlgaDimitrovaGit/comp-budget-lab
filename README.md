@@ -53,6 +53,20 @@ the review costs €1,119,187 a year with bonus and employer contributions,
 Method, input format, the Excel model and how to reproduce the numbers:
 [merit-matrix-calculator/README.md](merit-matrix-calculator/README.md).
 
+### [Vacancy calendar](vacancy-calendar/)
+
+**[Open the tool](https://olgadimitrovagit.github.io/comp-budget-lab/vacancy-calendar/)**
+
+What open roles really cost in 2027 once each one gets a realistic start date
+from the company's own hiring history, which start dates to defer to meet the
+payroll target, and what carries over into 2028. On the demo data "everyone from
+the requested month" costs €146.78M against a €137.3M target; realistic timelines bring it
+to €139.67M, and deferring 121 start dates by 3 months closes the rest. It reads
+the hiring history produced by the merge script below.
+
+Method, input format, the Excel model and how to reproduce the numbers:
+[vacancy-calendar/README.md](vacancy-calendar/README.md).
+
 ### [Hiring exports merge](hiring-exports-merge/)
 
 A short Python script, not a page. It joins three hiring exports that rarely
@@ -78,7 +92,8 @@ spreadsheet.
 
 The salary review calculator takes two input files, so it has two samples,
 `sample-employees.csv` and `sample-salary-ranges.csv`, and keeps its page
-sources in `page/`.
+sources in `page/`. So does the vacancy calendar: `sample-positions.csv` and
+`sample-hiring-history.csv`.
 
 `index.html` in each folder is generated from its sources; the build command is
 in that artefact's README. The `index.html` at the repository

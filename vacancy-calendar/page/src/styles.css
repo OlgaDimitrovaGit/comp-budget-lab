@@ -1,0 +1,145 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-total: var(--total);
+  --color-reduction: var(--reduction);
+  --color-target: var(--target);
+  --color-good: var(--good);
+  --color-row-hover: var(--row-hover);
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: oklch(0.975 0.004 85);
+  --foreground: oklch(0.22 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 255);
+  --popover: oklch(0.24 0.025 255);
+  --popover-foreground: oklch(0.97 0.004 85);
+  --primary: oklch(0.36 0.06 245);
+  --primary-foreground: oklch(0.98 0.003 85);
+  --secondary: oklch(0.95 0.006 85);
+  --secondary-foreground: oklch(0.26 0.02 255);
+  --muted: oklch(0.955 0.005 85);
+  --muted-foreground: oklch(0.5 0.015 255);
+  --accent: oklch(0.94 0.012 240);
+  --accent-foreground: oklch(0.26 0.03 250);
+  --destructive: oklch(0.55 0.17 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.9 0.006 85);
+  --input: oklch(0.86 0.008 85);
+  --ring: oklch(0.55 0.08 245);
+  --total: oklch(0.45 0.11 245);
+  --reduction: oklch(0.72 0.11 185);
+  --target: oklch(0.6 0.14 55);
+  --good: oklch(0.5 0.1 165);
+  --row-hover: oklch(0.955 0.012 240);
+}
+
+.dark {
+  --background: oklch(0.18 0.012 255);
+  --foreground: oklch(0.93 0.006 85);
+  --card: oklch(0.225 0.014 255);
+  --card-foreground: oklch(0.93 0.006 85);
+  --popover: oklch(0.96 0.004 85);
+  --popover-foreground: oklch(0.2 0.02 255);
+  --primary: oklch(0.78 0.07 240);
+  --primary-foreground: oklch(0.18 0.02 255);
+  --secondary: oklch(0.27 0.014 255);
+  --secondary-foreground: oklch(0.93 0.006 85);
+  --muted: oklch(0.25 0.012 255);
+  --muted-foreground: oklch(0.68 0.012 255);
+  --accent: oklch(0.29 0.025 245);
+  --accent-foreground: oklch(0.93 0.006 85);
+  --destructive: oklch(0.68 0.16 25);
+  --border: oklch(0.32 0.012 255);
+  --input: oklch(0.38 0.014 255);
+  --ring: oklch(0.7 0.08 240);
+  --total: oklch(0.66 0.12 250);
+  --reduction: oklch(0.58 0.11 170);
+  --target: oklch(0.66 0.14 60);
+  --good: oklch(0.72 0.1 165);
+  --row-hover: oklch(0.27 0.02 245);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@utility panel {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 2px oklch(0.2 0.02 255 / 0.04);
+}
+@utility eyebrow {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+@utility num { font-variant-numeric: tabular-nums; }
+@utility field {
+  width: 100%;
+  border: 1px solid var(--color-input);
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.6rem;
+  font-variant-numeric: tabular-nums;
+  transition: border-color .15s, box-shadow .15s;
+  &:focus { outline: none; border-color: var(--color-ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ring) 25%, transparent); }
+}
+@utility btn {
+  display: inline-flex; align-items: center; gap: .4rem;
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  padding: .4rem .75rem; font-size: .85rem; font-weight: 500;
+  background: var(--color-card);
+  transition: background .15s, border-color .15s;
+  cursor: pointer;
+  &:hover { background: var(--color-accent); border-color: var(--color-ring); }
+}
+@utility link {
+  color: var(--color-primary);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px;
+  &:hover { text-decoration-thickness: 2px; }
+}
