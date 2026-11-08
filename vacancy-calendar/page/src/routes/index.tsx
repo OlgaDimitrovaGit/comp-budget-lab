@@ -167,7 +167,7 @@ function Waterfall({ r }: { r: R }) {
 function Card({ title, big, line, bar, caption }: { title: string; big: ReactNode; line: ReactNode; bar: ReactNode; caption: ReactNode }) {
   return (
     <section className="panel grid content-start gap-y-2 p-4 sm:p-5 @2xl:row-span-5 @2xl:grid-rows-subgrid">
-      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
+      <h2 className="mb-2 text-base font-semibold sm:text-lg">{title}</h2>
       <div className="num text-2xl font-semibold tracking-tight @3xl:text-3xl">{big}</div>
       <div className="text-sm">{line}</div>
       <div className="mt-2 self-end">{bar}</div>
@@ -216,6 +216,10 @@ function Departments({ r }: { r: R }) {
     (a, d) => ({ roles: a.roles + d.roles, moved: a.moved + d.moved, requested: a.requested + d.requested, realistic: a.realistic + d.realistic, after_moves: a.after_moves + d.after_moves, savings: a.savings + d.savings, full_year: a.full_year + d.full_year }),
     { roles: 0, moved: 0, requested: 0, realistic: 0, after_moves: 0, savings: 0, full_year: 0 },
   );
+  // Leavers' empty seats lower payroll but belong to no open role: one row, so the Total matches the chart above.
+  const lv = cents(r.leavers) > 0 ? r.leavers : 0;
+  if (lv) { tot.realistic -= lv; tot.after_moves -= lv; tot.savings += lv; }
+  const lvLabel = "Leavers' empty seats, all departments";
   const shown = all ? depts : depts.slice(0, 12);
   const withTotal = depts.length > 1;
   const maxSav = Math.max(...depts.map((d) => d.savings), 1);
@@ -255,6 +259,14 @@ function Departments({ r }: { r: R }) {
                 <td className={td}>{m2(d.full_year)}</td>
               </tr>
             ))}
+            {lv > 0 && (
+              <tr className="border-b border-border text-muted-foreground transition-colors hover:bg-row-hover" {...bind(<><b>Leavers' empty seats</b><br />{r.attrition}% of current staff leave, each seat stays empty {r.vacant_months} months. Not tied to open roles</>)}>
+                <td className="px-3 py-2 text-left">{lvLabel}</td>
+                <td className={td}>—</td><td className={td}>—</td><td className={td}>—</td>
+                <td className={td}>−{m2(lv)}</td><td className={td}>−{m2(lv)}</td>
+                <td className={td}>{m2(lv)}</td><td className={td}>—</td>
+              </tr>
+            )}
             {withTotal && (
               <tr className="bg-muted font-semibold">
                 <td className="px-3 py-2 text-left">Total</td>
@@ -267,9 +279,18 @@ function Departments({ r }: { r: R }) {
           </tbody>
         </table>
       </div>
-      <div className="num space-y-2 md:hidden">
+      <div className="num flex flex-col gap-2 md:hidden">
+        {lv > 0 && (
+          <div className="order-1 rounded-md border border-border p-3 text-muted-foreground">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="font-medium">{lvLabel}</span>
+              <span className="text-xl font-semibold"><span className="mr-1.5 text-xs font-normal">Reduction vs request</span>{m2(lv)}</span>
+            </div>
+            <div className="mt-1 text-xs leading-relaxed">{r.attrition}% of current staff leave, each seat stays empty {r.vacant_months} months</div>
+          </div>
+        )}
         {[...shown.map((d) => ({ ...d, isTotal: false })), ...(withTotal ? [{ ...tot, department: "Total", isTotal: true }] : [])].map((d) => (
-          <div key={d.department} className={`rounded-md border border-border p-3 ${d.isTotal ? "bg-muted" : ""}`}>
+          <div key={d.department} className={`rounded-md border border-border p-3 ${d.isTotal ? "order-2 bg-muted" : ""}`}>
             <div className="flex items-baseline justify-between gap-2">
               <span className={d.isTotal ? "font-semibold" : "font-medium"}>{d.department}</span>
               <span className="text-xl font-semibold"><span className="mr-1.5 text-xs font-normal text-muted-foreground">Reduction vs request</span>{m2(d.savings)}</span>
@@ -333,7 +354,8 @@ const RATE_FIELDS = [
   ["Seat stays empty", "vacant", "months", "0 to 12"],
   ["Open roles filled", "fill", "%", "1 to 100"],
 ] as const;
-function Scenario({ f, planDate }: { f: Inputs; planDate: string }) {
+function Scenario({ f, planDate, r }: { f: Inputs; planDate: string; r: R }) {
+  const inStage = (s: string) => r.rows.filter((x) => x.stage === s).length;
   const keep = (v: number | null, money = false) => `Not a number. Still using ${v == null ? "—" : money ? `€${v.toFixed(2)}M` : v}`;
   const shown = new Date(`${planDate}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
   return (
@@ -356,7 +378,7 @@ function Scenario({ f, planDate }: { f: Inputs; planDate: string }) {
             </div>
           ))}
         </div>
-        <span className="mt-2 block text-xs text-muted-foreground">from the plan date, {shown}</span>
+        <span className="mt-2 block text-xs text-muted-foreground">from the plan date, {shown}. Applies to {inStage("interview")} roles interviewing and {inStage("offer")} with an offer sent. Cost counts in whole months: a start after the 15th counts from the next month.</span>
       </div>
       <div className="border-t border-border pt-4">
         <div className="text-sm font-semibold">Leavers and fill rate, 2027</div>
@@ -380,7 +402,7 @@ function Scenario({ f, planDate }: { f: Inputs; planDate: string }) {
 function Section({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
   return (
     <section className={`panel p-4 sm:p-5 ${className}`}>
-      <h2 className="mb-4 text-sm font-semibold">{title}</h2>
+      <h2 className="mb-4 text-base font-semibold sm:text-lg">{title}</h2>
       {children}
     </section>
   );
@@ -507,8 +529,8 @@ function Dashboard() {
       <div className="grid gap-5 md:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="hidden md:block">
           <div className="panel sticky top-6 p-4">
-            <h2 className="mb-4 text-sm font-semibold">Your inputs</h2>
-            <Scenario f={f} planDate={planDate} />
+            <h2 className="mb-4 text-base font-semibold sm:text-lg">Your inputs</h2>
+            <Scenario f={f} planDate={planDate} r={r} />
           </div>
         </aside>
 
@@ -525,13 +547,13 @@ function Dashboard() {
           <details className="panel group md:hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4">
               <span className="min-w-0">
-                <span className="block text-sm font-semibold">Your inputs</span>
+                <span className="block text-base font-semibold">Your inputs</span>
                 <span className="block text-xs text-muted-foreground">Payroll target, current payroll, deferrals, pipeline, leavers, fill rate</span>
               </span>
               <span className="btn shrink-0 group-open:hidden">Change ▾</span>
               <span className="btn hidden shrink-0 group-open:inline-flex">Hide ▴</span>
             </summary>
-            <div className="border-t border-border p-4"><Scenario f={f} planDate={planDate} /></div>
+            <div className="border-t border-border p-4"><Scenario f={f} planDate={planDate} r={r} /></div>
           </details>
 
           <Section title="2027 hiring budget: from the requests to the target"><Waterfall r={r} /></Section>
@@ -540,8 +562,7 @@ function Dashboard() {
 
           <Section title="Payroll impact by department, €M">
             <Departments r={r} />
-            <p className="mt-3 text-xs text-muted-foreground">Realistic: hiring timelines and the share of roles filled in 2027.{cents(r.leavers) > 0 && <> Leavers' empty seats ({eurM(-r.leavers, { sign: true })}) come off current payroll and are not split by department.</>}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Role-by-role list of deferrals: <a className="link" href="vacancy-calendar-model.xlsx" download>Excel model, Plan sheet</a></p>
+            <p className="mt-3 text-xs text-muted-foreground">Role-by-role list of deferrals: <a className="link" href="vacancy-calendar-model.xlsx" download>Excel model, Plan sheet</a></p>
           </Section>
         </main>
       </div>
