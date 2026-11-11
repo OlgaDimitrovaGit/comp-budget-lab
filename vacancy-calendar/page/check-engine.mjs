@@ -1,5 +1,5 @@
 // The page engine must equal reference_calc.py to the cent. exit 1 on any difference.
-//   node check-engine.mjs            demo + 4,000-row file + changed settings
+//   node check-engine.mjs            demo + 4,000-row file with FTE + changed settings
 //   node check-engine.mjs --self-test  a broken engine result must be caught
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
@@ -16,13 +16,15 @@ const selfTest = process.argv.includes("--self-test");
 
 // 4,000 roles: the demo rows repeated with varied ids, grades and months (deterministic).
 const demo = readFileSync(POS, "utf8").trim().split(/\r?\n/);
-const big = [demo[0]];
+const FTES = ["1", "0.5", "1,5", "10", "2.5", ""];
+const big = [demo[0] + ",fte"];
 for (let i = 0; i < 4000; i++) {
   const c = demo[1 + (i % (demo.length - 1))].split(",");
   c[0] = `B${String(i + 1).padStart(5, "0")}`;
   c[2] = `G${1 + ((i * 7) % 25)}`;
   c[5] = `2027-${String(1 + ((i * 5) % 12)).padStart(2, "0")}`;
-  big.push(c.join(","));
+  const f = FTES[i % FTES.length];
+  big.push(c.join(",") + "," + (f.includes(",") ? `"${f}"` : f));
 }
 const BIG = join(tmp, "big.csv");
 writeFileSync(BIG, big.join("\n"));
@@ -61,8 +63,19 @@ for (const c of cases) {
   errs.slice(0, 8).forEach((e) => console.log("     " + e));
   if (errs.length) fail++;
 }
+// FTE is linear: 0.5 of a post costs exactly half a full post, contributions included,
+// also above the contribution ceiling.
+{
+  const head = "position_id,department,grade,base_salary,target_bonus_pct,requested_month,fte";
+  const csv = [head, "A,X,G18,90000,15,2027-08,1", "B,X,G18,90000,15,2027-08,0.5", "C,X,G18,90000,15,2027-08,1.5"].join("\n");
+  const R = analyse(loadPositions(csv).positions, [], { ...DEFAULTS });
+  const [a, b, c] = R.rows;
+  const ok = [0, 1, 2, 3, 4].every((k) => near(b.cost[k], a.cost[k] / 2) && near(c.cost[k], a.cost[k] * 1.5)) && near(b.annual, a.annual / 2);
+  console.log(`${ok ? "ok  " : "FAIL"} FTE 0.5 and 1.5 cost half and one and a half of a full post`);
+  if (!ok) fail++;
+}
 if (selfTest) {
-  if (fail === cases.length) { console.log("self-test ok: broken result caught"); process.exit(0); }
+  if (fail >= cases.length) { console.log("self-test ok: broken result caught"); process.exit(0); }
   console.log("self-test FAIL: broken result not caught"); process.exit(1);
 }
 process.exit(fail ? 1 : 0);

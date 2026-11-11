@@ -57,14 +57,15 @@
 <p>Base salary plus bonus plus employer contributions:</p>
 <ul><li>salary × (1 + bonus) = 51,500 × 1.15 = <strong>€59,225</strong>;</li><li>employer contributions: 32.15% × 59,225 = <strong>€19,040.84</strong>;</li><li>total per year <strong>€78,265.84</strong>, per month <strong>€6,522.15</strong>.</li></ul>
 <p>Contributions use one combined rate. The default is Spain 2026: 32.15% on pay up to a cap of €61,214.40 a year. For another country, change the rate and the cap on the Inputs sheet. If there is no cap, leave the cell empty.</p>
+<p>A role can be a share of a full-time post (the optional <code>fte</code> column). The cost scales linearly: 0.5 costs exactly half a full post, contributions included, and 1.5 one and a half. Salary is entered for one full-time person. All demo roles are full-time.</p>
 <h2>Step 2. Budget "as requested"</h2>
 <p>The month in the request is the month the manager wants the person at work. For a project role it is the project launch month. Each role is paid from that month. P0002 is requested for January: 12 months, €78,265.84.</p>
 <p>In the demo nearly every request says "from January", which is how managers usually file them. Only project roles and 4 regular roles ask for a later month.</p>
 <p>Across all 240 roles that comes to <strong>€16.78M</strong>. With current payroll that is €146.78M against a target of €137.3M: an <strong>overrun of €9.48M</strong>.</p>
 <h2>Step 3. Time to approve the request</h2>
-<p>The budget year opens on January 1, and no hiring starts before that. So a role starts in the requested month only if there is time to approve the request and find the person by then. If there isn't, it starts as soon as that work can be done, counting from January 1.</p>
+<p>The budget year opens on January 1: for roles without a candidate, hiring starts no earlier than that. So a role starts in the requested month only if there is time to approve the request and find the person by then. If there isn't, it starts as soon as that work can be done, counting from January 1.</p>
 <p>Approval time comes from the company's own hiring history: the median days from request to posted vacancy, by grade. For G14 it is 24 days, so P0002 is posted on January 25.</p>
-<p>The 15th of the month rule applies here too: someone who starts after the 15th is paid from the following month. P0002 moves to February: 11 months, €71,743.68.</p>
+<p>The 15th of the month rule applies here too: a start after the 15th counts in the budget from the following month. If someone started on the day the vacancy is posted, P0002 would count from February: 11 months, €71,743.68.</p>
 <p>Across all roles this step takes off <strong>€1.15M</strong>.</p>
 <p>&gt; If a grade has fewer than 3 filled vacancies in the history, its median &gt; can't be trusted and a default is used instead. You can see and change &gt; the default on the Inputs sheet.</p>
 <h2>Step 4. Time until the person starts</h2>

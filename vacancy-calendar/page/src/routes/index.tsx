@@ -426,6 +426,7 @@ const POSITION_HELP: [string, string][] = [
   ["expected_start", "start date for accepted offers, YYYY-MM-DD"],
   ["project_start", "optional, YYYY-MM-DD: the role is not needed earlier"],
   ["critical", "optional, yes or no: critical roles are never deferred"],
+  ["fte", "optional, share of a full-time post: 0.5 is half-time, 10 is ten identical roles in one row; empty means 1"],
 ];
 const HISTORY_HELP: [string, string][] = [
   ["grade", "G1 to G25"],

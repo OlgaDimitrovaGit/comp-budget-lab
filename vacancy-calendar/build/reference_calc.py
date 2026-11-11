@@ -127,7 +127,11 @@ def load_positions(path):
             "expected_start": parse_date(r["expected_start"]) if (r.get("expected_start") or "").strip() else None,
             "project_start": parse_date(r["project_start"]) if (r.get("project_start") or "").strip() else None,
             "critical": (r.get("critical") or "").strip().lower() in ("yes", "y", "1", "true"),
+            # Share of a full-time post: 0.5 costs exactly half a full post, contributions included.
+            "fte": float((r.get("fte") or "1").replace(",", ".")),
         })
+        if out[-1]["fte"] <= 0:
+            raise ValueError(f"{out[-1]['id']}: fte must be above 0")
     return out
 
 
@@ -166,7 +170,8 @@ def analyse(positions, history, S=DEFAULTS):
     for p in positions:
         t = T[p["grade"]]
         pay = p["base"] * (1 + p["bonus_pct"] / 100)
-        annual = pay + contributions(pay, S)
+        # FTE scales pay and contributions linearly: 0.5 is half the cost of one full-time person.
+        annual = p.get("fte", 1.0) * (pay + contributions(pay, S))
         s0 = p["requested"]
         # The requested month is when the manager wants the person to start. Hiring
         # can begin ahead of it, but not before the budget year opens.

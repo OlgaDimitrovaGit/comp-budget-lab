@@ -40,7 +40,7 @@ export const DEFAULTS = {
   ceiling: 61214.4,
 };
 
-export const POSITION_COLUMNS = ["position_id", "department", "grade", "base_salary", "target_bonus_pct", "requested_month", "stage", "expected_start", "project_start", "critical"];
+export const POSITION_COLUMNS = ["position_id", "department", "grade", "base_salary", "target_bonus_pct", "requested_month", "stage", "expected_start", "project_start", "critical", "fte"];
 export const HISTORY_COLUMNS = ["grade", "request_to_open_days", "open_to_start_days"];
 
 /* ---------- dates: whole days in UTC ---------- */
@@ -122,6 +122,9 @@ export function loadPositions(text) {
     if (stage && !["interview", "offer", "accepted"].includes(stage)) throw new Error(`${at}: stage "${stage}" — use interview, offer, accepted or leave empty.`);
     const exp = r.get("expected_start");
     if (stage === "accepted" && !exp) throw new Error(`${at}: stage accepted needs expected_start.`);
+    // Share of a full-time post: 0.5 costs exactly half a full post, contributions included.
+    const fte = r.get("fte") ? num(r.get("fte"), `${at}, fte`) : 1;
+    if (!(fte > 0)) throw new Error(`${at}: fte must be above zero, got "${r.get("fte")}".`);
     out.push({
       id: r.get("position_id"),
       department: r.get("department"),
@@ -133,6 +136,7 @@ export function loadPositions(text) {
       expected_start: exp ? parseDate(exp, `${at}, expected_start`) : null,
       project_start: r.get("project_start") ? parseDate(r.get("project_start"), `${at}, project_start`) : null,
       critical: ["yes", "y", "1", "true"].includes(r.get("critical").toLowerCase()),
+      fte,
     });
   }
   if (!out.length) throw new Error("Open roles file: no rows with position_id.");
@@ -176,7 +180,7 @@ export function analyse(positions, history, S) {
   const rows = positions.map((p) => {
     const t = T[p.grade];
     const pay = p.base * (1 + p.bonus_pct / 100);
-    const annual = pay + contributions(pay, S);
+    const annual = p.fte * (pay + contributions(pay, S));
     const s0 = p.requested;
     const [lag, ttf] = p.stage ? [0, 0] : [t.lag, t.ttf];
     const s1 = Math.max(s0, addDays(jan1, lag));

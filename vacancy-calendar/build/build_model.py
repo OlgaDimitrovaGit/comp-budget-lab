@@ -225,15 +225,22 @@ INPUT_COLS = [
     ("proj", "project_start", DATE, "For a role tied to a project: the launch date. The role does not start before it.",
      ""),
     ("crit", "critical", None, "yes: never deferred.", ""),
+    ("fte_in", "fte", "0.0#", "Share of a full-time post: 1 one post, 0.5 half a post, 10 ten identical roles in one row. "
+     "Empty = 1. Pay and contributions are multiplied by it.",
+     ""
+     ""),
 ]
 
 CALC = [
     ("Step 1. Full annual cost", [
-        ("pay", "Annual pay (base + target bonus)", EUR, "={base}*(1+{bonus}/100)",
+        ("fte", "FTE used", "0.0#", '=IF({fte_in}="",1,{fte_in})', "Empty input = 1.", ""),
+        ("pay", "Annual pay of one full-time person (base + target bonus)", EUR, "={base}*(1+{bonus}/100)",
          "Base plus target bonus.", ""),
-        ("con", "Employer contributions", EUR, "=" + CONTRIB.format(x="{pay}"),
-         "One total rate on pay up to the ceiling (Inputs).", ""),
-        ("ann", "Full annual cost", EUR, "={pay}+{con}", "What the role costs for a full year.", ""),
+        ("con", "Employer contributions", EUR, "={fte}*" + CONTRIB.format(x="{pay}"),
+         "One total rate on pay up to the ceiling (Inputs), for one full-time person × FTE.",
+         ""),
+        ("ann", "Full annual cost", EUR, "={fte}*{pay}+{con}", "What the role costs for a full year: FTE × pay plus contributions.",
+         ""),
         ("mon", "Monthly cost", EUR, "={ann}/12", "Full annual cost ÷ 12.", ""),
     ]),
     ("Step 2. Days by grade", [
@@ -353,7 +360,7 @@ for j, (key, header, fmt, en, ru) in enumerate(INPUT_COLS):
 for i, p in enumerate(positions):
     r = DATA0 + i
     vals = [p["id"], p["department"], p["grade"], p["base"], p["bonus_pct"], p["requested"], p["stage"] or None,
-            p["expected_start"], p["project_start"], "yes" if p["critical"] else "no"]
+            p["expected_start"], p["project_start"], "yes" if p["critical"] else "no", p["fte"]]
     for j, v in enumerate(vals):
         if v is not None:
             wp.cell(r, 1 + j, v)
@@ -547,7 +554,9 @@ method = [
      ""
      ""),
     ("1. Full cost of a role: annual base × (1 + target bonus %) plus employer contributions at one total rate, "
-     "on pay up to the ceiling. Replace the rate and ceiling on Inputs with your country's.",
+     "on pay up to the ceiling. Replace the rate and ceiling on Inputs with your country's. FTE scales it all linearly: "
+     "0.5 costs exactly half a full post, 10 is ten identical roles in one row.",
+     ""
      ""
      ""),
     ("2. Realistic start: the manager's month + request to posting + posting to first day, both as the median for the grade "

@@ -44,14 +44,16 @@ deferrals save money in 2027 only.
 ## Method
 
 1. Full annual cost of a role: base salary × (1 + target bonus) + employer
-   contributions at one combined rate up to a ceiling.
+   contributions at one combined rate up to a ceiling. A share of a
+   full-time post (`fte`) scales pay and contributions linearly: 0.5 costs
+   exactly half a full post.
 2. Start date: the requested month, but no earlier than the request can be
    approved and the role filled, counting from 1 January. Approval and search
    times are the medians by grade from the hiring history; a grade with fewer
    than 3 filled roles takes default timings. A candidate already in the
    pipeline starts a set number of days after the plan date (interview 40,
    offer 20) or on the agreed date. A project role starts no earlier than
-   its project. Someone who starts after the 15th is paid from the next month.
+   its project. A start after the 15th counts in the budget from the next month.
 3. Realistic forecast: roles without a candidate are counted at the fill rate
    (90% by default); leavers' seats stay empty for a while (10% a year, 2 months
    by default) and that comes off current payroll.
@@ -71,7 +73,7 @@ The page states every rule under "Your data, Excel model and method";
 Open roles:
 
 ```
-position_id, department, grade, base_salary, target_bonus_pct, requested_month, stage, expected_start, project_start, critical
+position_id, department, grade, base_salary, target_bonus_pct, requested_month, stage, expected_start, project_start, critical, fte
 ```
 
 Hiring history:
@@ -84,7 +86,8 @@ requisition, grade, department, requested, opened, started, request_to_open_days
 base pay. `requested_month` is `YYYY-MM`, dates are `YYYY-MM-DD`. `stage` is
 empty, `interview`, `offer` or `accepted`; `expected_start` is the agreed
 date for `accepted`. `project_start` is filled for project roles only.
-`critical` is `yes` or `no`. The hiring history is the output of the
+`critical` is `yes` or `no`. `fte` is optional: the share of a full-time
+post, empty means 1; `base_salary` is for one full-time person. The hiring history is the output of the
 [hiring exports merge](../hiring-exports-merge/) script; its first line
 `sep=,` is optional.
 
@@ -109,7 +112,7 @@ build/                        the model and the reference calculation
 
 page/                         sources of index.html (React, Vite)
   src/lib/engine.js           the page's calculation, a line-by-line port of reference_calc.py
-  check-engine.mjs            engine against reference_calc.py, 6 scenarios incl. a 4,000-role file
+  check-engine.mjs            engine against reference_calc.py, 6 scenarios incl. a 4,000-role file, and FTE
   check-network.mjs           the built page in Chrome: no requests on load or after picking files
 ```
 
