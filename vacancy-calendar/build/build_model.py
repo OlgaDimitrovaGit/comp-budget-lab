@@ -107,7 +107,7 @@ settings = [
      ""),
     ("FillRate", "Open roles filled in the budget year, %", S["fill_rate"] / 100, "0%", True,
      "Share of roles without a candidate that actually start in the budget year. Roles with a candidate in the "
-     "pipeline count in full. A role not filled this year has to be approved again for the next. Illustrative: "
+     "pipeline count in full. A role not filled this year usually has to be justified again in next year's budget. Illustrative: "
      "use your own history.",
      ""
      ""
@@ -574,7 +574,7 @@ method = [
     ("4a. Realistic forecast: not every open role is filled within the year. Roles without a candidate are weighted by "
      "the fill rate on Inputs, roles with a candidate count in full. Current staff who leave save pay while their seat "
      "is empty: current payroll × attrition × empty months ÷ 12. Both defaults are illustrative: use your own history. "
-     "A role not filled this year has to be approved again for the next.",
+     "A role not filled this year usually has to be justified again in next year's budget.",
      ""
      ""
      ""
